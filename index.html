@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نظام IOT</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script> 
+    <style>
+        :root { --f1: #3498db; --f2: #e74c3c; --f3: #f1c40f; --f4: #2ecc71; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #87CEEB; margin: 0; overflow-x: hidden; }
+        #login-page { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://scontent-hbe1-1.xx.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=pwJsQO6gcb0Q7kNvwErkW5C&_nc_oc=AdrChze-816Lq4kox_J0nhvfNTpsKp4Hsy4cNzdMgnspCWQPP9qux_S86EamOv4YW8A&_nc_zt=23&_nc_ht=scontent-hbe1-1.xx&_nc_gid=iWkLeZYXjc5E0CYG5K0Uwg&_nc_ss=7a30f&oh=00_AfxkfD9FKIE-fj5WR4zmEej5JGSuPhJeBM8GnZsIpWCpEw&oe=69C505C3'); background-size: cover; background-position: center; }
+        .login-card { background: rgba(255, 255, 255, 0.9); padding: 40px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+        .login-card input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
+        
+        /* زرار دخول مطور */
+        .btn-login { width: 100%; padding: 12px; background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3); }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(39, 174, 96, 0.4); }
+
+        #welcome-page { height: 100vh; display: none; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://www.vidaenlatierra.com/wp-content/uploads/2020/11/monocultivos-circulares.jpg'); background-size: cover; position: relative; }
+        .credits-section { position: absolute; bottom: 0; width: 100%; text-align: center; background: rgba(255, 255, 255, 0.9); padding: 10px 0; border-top: 3px solid #2ecc71; }
+        .logout-btn { position: fixed; top: 15px; left: 15px; background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; z-index: 10000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: bold; }
+        #dashboard-page { padding: 20px; background: var(--bg); min-height: 100vh; padding-bottom: 120px; }
+        .main-layout { display: flex; flex-wrap: wrap; flex-direction: row-reverse; gap: 20px; justify-content: center; }
+        .chart-box { flex: 2; min-width: 600px; order: 1; position: relative; padding-bottom: 80px; }
+        .sidebar { flex: 1; min-width: 350px; order: 2; display: flex; flex-direction: column; }
+        .box { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .chart-container { height: 500px; width: 100%; }
+        .scroll-area { height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; text-align: center; }
+        th, td { border: 1px solid #ddd; padding: 8px; vertical-align: middle; }
+        .grid-cell { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: #ddd; border: 1px solid #ccc; }
+        .sub-val { background: white; padding: 4px; font-size: 0.75em; font-weight: bold; line-height: 1.4; }
+        .earth-link { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 70px; height: 70px; background: #3498db; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 35px; cursor: pointer; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 10; border: 3px solid white; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(52, 152, 219, 0); } 100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); } }
+        .error-msg { color: #e74c3c; font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #f8d7da; padding: 3px; font-size: 0.9em; }
+        .preview-label { display: block; font-size: 0.8em; color: #666; margin-top: 4px; }
+        #timeSinceStatus { color: red; font-size: 0.8em; display: block; margin-top: 5px; font-weight: normal; }
+
+        /* ستايل الأزرار الاحترافية الجديد */
+        .btn-modern {
+            flex: 1; padding: 12px; border: none; border-radius: 12px; cursor: pointer;
+            font-weight: bold; display: flex; align-items: center; justify-content: center;
+            gap: 10px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            color: white; font-size: 0.95em;
+        }
+        .btn-excel { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .btn-excel:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(243, 156, 18, 0.4); background: linear-gradient(135deg, #e67e22, #d35400); }
+        .btn-delete { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .btn-delete:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4); background: linear-gradient(135deg, #c0392b, #a93226); }
+    </style>
+</head>
+<body>
+
+    <div id="login-page">
+        <div class="login-card">
+            <h2>تسجيل الدخول</h2>
+            <input type="email" id="email" placeholder="البريد الإلكتروني">
+            <input type="password" id="password" placeholder="كلمة المرور">
+            <button class="btn-login" id="loginBtn">دخول</button>
+        </div>
+    </div>
+
+    <button id="globalLogout" class="logout-btn" style="display:none;">تسجيل الخروج 🚪</button>
+
+    <div id="welcome-page">
+        <div style="background: rgba(255,255,255,0.95); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <h1 style="color:#2c3e50;">نظام IOT المطور للري الذكي</h1>
+            <button style="padding: 15px 60px; font-size: 1.3em; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; font-weight: bold;" onclick="showDashboard()">جهاز 1 💧</button>
+        </div>
+        <div class="credits-section">
+            <h4 style="margin:5px;">إعداد المهندسين:</h4>
+            <p style="margin:0; font-weight:bold; color:#2980b9;">م/كريم عمرو-م/نادر رامز-م/أمنية علاء-م/نجوى وجيه-م/أحمد ياسر-م/الشيماء جمال-م/أحمد باسم-م/فاطمة علي-م/أمين حجاج-م/سيف الدين حسين</p>
+            <h4 style="margin:5px;">تحت إشراف:</h4>
+            <p style="margin:0; font-weight:bold; color:#e67e22;">أ.د/ياسر عزت</p>
+        </div>
+    </div>
+
+    <div id="dashboard-page" style="display:none;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:20px;">
+            <div class="box" style="border-bottom: 5px solid var(--f1); text-align: center;">F1: <span id="v1">0.00</span> M3/hr <span id="p1" class="preview-label"></span></div>
+            <div class="box" style="border-bottom: 5px solid var(--f2); text-align: center;">F2: <span id="v2">0.00</span> M3/hr <span id="p2" class="preview-label"></span></div>
+            <div class="box" style="border-bottom: 5px solid var(--f3); text-align: center;">F3: <span id="v3">0.00</span> M3/hr <span id="p3" class="preview-label"></span></div>
+            <div class="box" style="border-bottom: 5px solid var(--f4); text-align: center;">F4: <span id="v4">0.00</span> M3/hr <span id="p4" class="preview-label"></span></div>
+        </div>
+
+        <div class="main-layout">
+            <div class="chart-box">
+                <div class="box chart-container">
+                    <canvas id="myChart"></canvas>
+                </div>
+                <div id="mapLink" class="earth-link">🌍</div>
+            </div>
+
+            <div class="sidebar">
+                <div class="box" style="text-align:center;">
+                    <h3 id="mainStatus" style="margin:0;">النظام متوقف حالياً</h3>
+                    <span id="timeSinceStatus"></span>
+                </div>
+                <div class="box" style="height: 250px; display: flex; flex-direction: column;">
+                    <h4 style="color:red; text-align:center; margin:0 0 10px 0;">⚠️ سجل الأعطال</h4>
+                    <div id="errorLog" style="flex-grow: 1; overflow-y: auto; background: #fff5f5; border-radius: 8px; padding: 10px;"></div>
+                </div>
+                <div class="box">
+                    <h4 style="text-align:center; margin:0 0 10px 0;">📊 سجل الري</h4>
+                    <div class="scroll-area">
+                        <table id="historyTable">
+                            <thead>
+                                <tr>
+                                    <th>العملية</th>
+                                    <th>التاريخ</th>
+                                    <th>اليوم</th>
+                                    <th>كمية المياه (M3)</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <button onclick="exportToExcel()" class="btn-modern btn-excel">
+                            <span>طباعة ملف</span> 📊
+                        </button>
+                        <button onclick="clearAllHistory()" class="btn-modern btn-delete">
+                            <span>حذف السجل</span> 🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDNWgqZdWppxKD2oGynIgut9cRGXFVGTKw",
+            authDomain: "iot-based-irrigation-sys-d58bc.firebaseapp.com",
+            databaseURL: "https://iot-based-irrigation-sys-d58bc-default-rtdb.firebaseio.com",
+            projectId: "iot-based-irrigation-sys-d58bc",
+            appId: "1:510827076072:web:9644eaa8bdfa3e92e7ec5d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+
+        let myChart, isWatering = false;
+        let sessionData = { 
+            startTimes: [null,null,null,null], 
+            endTimes: [null,null,null,null],
+            rawStartTimes: [null,null,null,null],
+            rawEndTimes: [null,null,null,null],
+            accumulatedAmounts: [0, 0, 0, 0]
+        };
+
+        let sessionStats = {
+            sumFlow: [0, 0, 0, 0],
+            counts: [0, 0, 0, 0]
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('login-page').style.display = 'none';
+                document.getElementById('globalLogout').style.display = 'block';
+                if (localStorage.getItem('activePage') === 'dashboard') showDashboard(); 
+                else document.getElementById('welcome-page').style.display = 'flex';
+            } else {
+                showLoginPage();
+            }
+        });
+
+        function showLoginPage() {
+            document.getElementById('login-page').style.display = 'flex';
+            document.getElementById('welcome-page').style.display = 'none';
+            document.getElementById('dashboard-page').style.display = 'none';
+            document.getElementById('globalLogout').style.display = 'none';
+            localStorage.removeItem('activePage');
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            if(email && pass) signInWithEmailAndPassword(auth, email, pass).catch(() => alert("بيانات خاطئة"));
+        });
+
+        document.getElementById('globalLogout').addEventListener('click', () => {
+            signOut(auth).then(() => showLoginPage());
+        });
+
+        window.showDashboard = function() {
+            localStorage.setItem('activePage', 'dashboard');
+            document.getElementById('welcome-page').style.display = 'none';
+            document.getElementById('dashboard-page').style.display = 'block';
+            setTimeout(() => { initChart(); loadHistory(); startTracking(); setInterval(updateLastSeen, 1000); }, 100);
+        }
+
+        // تأكد من وجود هذا المتغير في بداية السكربت مع sessionStats
+// 1. دالة التتبع المحدثة (شاملة الـ GPS ومسح الأعطال)
+function startTracking() {
+    onValue(ref(db, 'sensor_data/flow-sensor'), (snap) => {
+        const d = snap.val() || {f1:0, f2:0, f3:0, f4:0};
+        const f = [parseFloat(d.f1 || 0), parseFloat(d.f2 || 0), parseFloat(d.f3 || 0), parseFloat(d.f4 || 0)];
+        const now = Date.now();
+        const timeStr = new Date().toLocaleTimeString('ar-EG', {hour12: true});
+
+        const anyFlow = f.some(v => v > 0.1);
+
+        if (anyFlow) {
+            isWatering = true;
+            document.getElementById('mainStatus').innerText = "جهاز 1 قيد التشغيل الآن ...💧";
+
+            f.forEach((v, i) => {
+                if (v > 0.1) {
+                    if (!sessionData.rawStartTimes[i]) {
+                        addZeroPointToChart(i);
+                        sessionData.startTimes[i] = timeStr;
+                        sessionData.rawStartTimes[i] = now;
+                        sessionData.rawEndTimes[i] = null;
+                        sessionStats.sumFlow[i] = 0;
+                        sessionStats.counts[i] = 0;
+                    }
+                    sessionStats.sumFlow[i] += v;
+                    sessionStats.counts[i] += 1;
+                } else {
+                    if (sessionData.rawStartTimes[i] && !sessionData.rawEndTimes[i]) {
+                        calculateFinalForSprinkler(i, now, timeStr);
+                    }
+                }
+                document.getElementById('v' + (i + 1)).innerText = v.toFixed(2);
+            });
+
+            updateChart(f); // استدعاء الدالة المحدثة
+            updateErrorLogs(f, true);
+        } else if (isWatering && !anyFlow) {
+            isWatering = false;
+            
+            const endT = new Date().toLocaleTimeString('ar-EG', {hour12: false});
+            if (typeof myChart !== 'undefined') {
+                myChart.data.labels.push(endT + " (توقف)");
+                myChart.data.datasets.forEach(d => d.data.push(0)); 
+                myChart.update();
+            }
+
+            f.forEach((v, i) => {
+                if (sessionData.rawStartTimes[i] && !sessionData.rawEndTimes[i]) {
+                    calculateFinalForSprinkler(i, now, timeStr);
+                }
+                if (document.getElementById('v' + (i + 1))) {
+                    document.getElementById('v' + (i + 1)).innerText = "0.00";
+                }
+                const pElement = document.getElementById(`p${i+1}`);
+                if (pElement) pElement.innerText = "";
+            });
+
+            updateErrorLogs(f, false); // مسح سجل الأعطال فوراً
+            saveSession();
+            document.getElementById('mainStatus').innerText = "النظام متوقف حالياً";
+            localStorage.setItem('lastStoppedTime', Date.now().toString());
+        }
+    });
+
+    // مراقبة الـ GPS لفتح الخريطة
+    onValue(ref(db, 'sensor_data/gps'), (snap) => {
+        const coords = snap.val() || {lat: 0, lang: 0};
+        const mapIcon = document.getElementById('mapLink');
+        if (mapIcon) {
+            mapIcon.onclick = () => {
+                if (coords.lat !== 0 && coords.lang !== 0) {
+                    window.open(`https://www.google.com/maps?q=${coords.lat},${coords.lang}`, '_blank');
+                } else {
+                    alert("الإحداثيات غير متوفرة");
+                }
+            };
+        }
+    });
+}
+        function addZeroPointToChart(index) {
+            const t = new Date().toLocaleTimeString('ar-EG', {hour12:false});
+            myChart.data.labels.push(t + " (بدء)");
+            myChart.data.datasets.forEach((d, i) => {
+                d.data.push(i === index ? 0 : d.data[d.data.length-1] || 0);
+            });
+            myChart.update();
+        }
+
+        function updateLastSeen() {
+            const lastStop = localStorage.getItem('lastStoppedTime');
+            const statusEl = document.getElementById('timeSinceStatus');
+            if (!lastStop || isWatering) { statusEl.innerText = ""; return; }
+
+            const diffMs = Date.now() - parseInt(lastStop);
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHrs = Math.floor(diffMin / 60);
+
+            let text = "اخر وقت تشغيل منذ ";
+            if (diffSec < 60) { text += `${diffSec} ثانية`; }
+            else if (diffMin < 60) { text += `${diffMin} دقيقة`; }
+            else if (diffHrs < 24) { text += `${diffHrs} ساعة و ${diffMin % 60} دقيقة`; }
+            else {
+                const d = new Date(parseInt(lastStop));
+                text = `اخر وقت تشغيل بتاريخ ${d.toLocaleDateString('ar-EG')} الساعة ${d.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}`;
+            }
+            statusEl.innerText = text;
+        }
+
+        function calculateFinalForSprinkler(i, now, timeStr) {
+            sessionData.rawEndTimes[i] = now;
+            sessionData.endTimes[i] = timeStr;
+            const avgFlow = sessionStats.sumFlow[i] / (sessionStats.counts[i] || 1);
+            const durationHrs = (now - sessionData.rawStartTimes[i]) / 3600000;
+            sessionData.accumulatedAmounts[i] = avgFlow * durationHrs;
+        }
+
+        function updateErrorLogs(f, isActive) {
+            const log = document.getElementById('errorLog');
+            if (!log) return;
+            if (!isActive) { log.innerHTML = ""; return; }
+            let html = "";
+            f.forEach((v, i) => { if (v < 0.1) html += `<div class="error-msg">⚠️ رشاش ${i + 1} لا يعمل</div>`; });
+            log.innerHTML = html;
+        }
+
+        function saveSession() {
+            const history = JSON.parse(localStorage.getItem('irr_history') || "[]");
+            const finalAmounts = sessionData.accumulatedAmounts.map(a => parseFloat(a).toFixed(4));
+            const durations = sessionData.rawStartTimes.map((start, i) => {
+                if (start && sessionData.rawEndTimes[i]) {
+                    let diff = Math.floor((sessionData.rawEndTimes[i] - start) / 1000);
+                    let h = Math.floor(diff / 3600);
+                    let m = Math.floor((diff % 3600) / 60);
+                    let s = diff % 60;
+                    return `${h}س و${m}د و${s}ث`;
+                }
+                return "-";
+            });
+
+            history.push({
+                id: history.length + 1,
+                date: new Date().toLocaleDateString('ar-EG'),
+                day: new Intl.DateTimeFormat('ar-EG', {weekday:'long'}).format(new Date()),
+                amounts: finalAmounts,
+                startTimes: [...sessionData.startTimes],
+                endTimes: [...sessionData.endTimes],
+                durations: durations
+            });
+            localStorage.setItem('irr_history', JSON.stringify(history));
+            sessionData.rawStartTimes = [null,null,null,null];
+            sessionData.rawEndTimes = [null,null,null,null];
+            sessionData.startTimes = [null,null,null,null];
+            sessionData.endTimes = [null,null,null,null];
+            sessionData.accumulatedAmounts = [0,0,0,0];
+            loadHistory();
+        }
+
+        window.loadHistory = function() {
+    const tbody = document.querySelector('#historyTable tbody');
+    tbody.innerHTML = "";
+    const history = JSON.parse(localStorage.getItem('irr_history') || "[]");
+    
+    // شلنا .reverse() عشان يعرض بالترتيب الطبيعي (من 1 إلى الأحدث)
+    history.slice().forEach(row => {
+        const tr = tbody.insertRow();
+        tr.innerHTML = `<td>${row.id}</td><td>${row.date}</td><td>${row.day}</td>
+            <td><div class="grid-cell">
+                <div class="sub-val" style="color:var(--f1)">F1:${row.amounts[0]}</div>
+                <div class="sub-val" style="color:var(--f2)">F2:${row.amounts[1]}</div>
+                <div class="sub-val" style="color:var(--f3)">F3:${row.amounts[2]}</div>
+                <div class="sub-val" style="color:var(--f4)">F4:${row.amounts[3]}</div>
+            </div></td>`;
+    });
+}
+
+        function initChart() {
+    const ctx = document.getElementById('myChart');
+    if (myChart) myChart.destroy();
+    
+    // 1. استرجاع البيانات المحفوظة
+    let savedLabels = JSON.parse(localStorage.getItem('chart_labels') || "[]");
+    let datasetsData = [];
+    for (let i = 1; i <= 4; i++) {
+        datasetsData.push(JSON.parse(localStorage.getItem(`chart_f${i}`) || "[]"));
+    }
+
+    // 2. فحص حالة الري الحالية من الداتا اللي جاية من الحساسات
+    // لو كل القراءات الحالية صفر، ده معناه إننا لازم نقفل المنحنى عند الصفر
+    const isCurrentlyOff = datasetsData.every(data => data.length > 0 && data[data.length - 1] < 0.1);
+
+    // لو النظام واقف بس آخر نقطة متسجلة كانت عالية، بنضيف نقطة صفر "قفل"
+    if (datasetsData.some(data => data.length > 0 && data[data.length - 1] > 0)) {
+        const nowStr = new Date().toLocaleTimeString('ar-EG', {hour12:false});
+        savedLabels.push(nowStr + " (توقف)");
+        datasetsData.forEach(data => {
+            data.push(0); // إجبار كل المنحنيات تنزل للصفر
+        });
+    }
+
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: { 
+            labels: savedLabels, 
+            datasets: [
+                { label: 'F1', borderColor: '#3498db', data: datasetsData[0], tension: 0.4, fill: false, pointRadius: 0 },
+                { label: 'F2', borderColor: '#e74c3c', data: datasetsData[1], tension: 0.4, fill: false, pointRadius: 0 },
+                { label: 'F3', borderColor: '#f1c40f', data: datasetsData[2], tension: 0.4, fill: false, pointRadius: 0 },
+                { label: 'F4', borderColor: '#2ecc71', data: datasetsData[3], tension: 0.4, fill: false, pointRadius: 0 }
+            ]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            animation: false, 
+            scales: { y: { beginAtZero: true, suggestedMax: 2.0 } } 
+        }
+    });
+
+    // حفظ حالة "القفل" الجديدة عشان الريفريش اللي جاي
+    localStorage.setItem('chart_labels', JSON.stringify(savedLabels));
+    datasetsData.forEach((data, i) => {
+        localStorage.setItem(`chart_f${i+1}`, JSON.stringify(data));
+    });
+}
+        
+// 2. دالة تحديث المنحنى المحدثة (لحل مشكلة الخط الأفقي عند الريفرش)
+function updateChart(f) {
+    const t = new Date().toLocaleTimeString('ar-EG', {hour12:false});
+    myChart.data.labels.push(t);
+    f.forEach((v, i) => myChart.data.datasets[i].data.push(v));
+
+    // إذا كان النظام متوقف، اجعل آخر نقطة صفر لضمان قفل المنحنى
+    if (f.every(v => v < 0.1)) {
+        myChart.data.datasets.forEach(d => {
+            if (d.data.length > 0) d.data[d.data.length - 1] = 0;
+        });
+    }
+
+    if(myChart.data.labels.length > 30) { 
+        myChart.data.labels.shift(); 
+        myChart.data.datasets.forEach(d => d.data.shift()); 
+    }
+    myChart.update();
+    
+    localStorage.setItem('chart_labels', JSON.stringify(myChart.data.labels));
+    myChart.data.datasets.forEach((d, i) => {
+        localStorage.setItem(`chart_f${i+1}`, JSON.stringify(d.data));
+    });
+}
+
+// 3. دالة الإكسل المحدثة (شاملة التنسيق القديم + الصورة HD + ملف ZIP)
+window.exportToExcel = async function() {
+    const history = JSON.parse(localStorage.getItem('irr_history') || "[]");
+    if (history.length === 0) { alert("السجل فارغ"); return; }
+
+    let dataArr = [
+        ["تقرير نظام IOT(مشروع تخرج المستوى الرابع)"],
+        ["العملية", "التاريخ", "اليوم", "بداية التشغيل", "", "", "", "نهاية التشغيل", "", "", "", "زمن التشغيل", "", "", "", "كمية المياه (M3)", "", "", ""],
+        ["", "", "", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "F1", "F2", "F3", "F4"]
+    ];
+
+    history.forEach(row => {
+        dataArr.push([row.id, row.date, row.day, ...(row.startTimes || ["-","-","-","-"]), ...(row.endTimes || ["-","-","-","-"]), ...(row.durations || ["-","-","-","-"]), ...(row.amounts || ["0","0","0","0"])]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(dataArr);
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 18 } }, { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } }, { s: { r: 1, c: 1 }, e: { r: 2, c: 1 } }, { s: { r: 1, c: 2 }, e: { r: 2, c: 2 } }, { s: { r: 1, c: 3 }, e: { r: 1, c: 6 } }, { s: { r: 1, c: 7 }, e: { r: 1, c: 10 } }, { s: { r: 1, c: 11 }, e: { r: 1, c: 14 } }, { s: { r: 1, c: 15 }, e: { r: 1, c: 18 } }];
+    
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cell_ref = XLSX.utils.encode_cell({ c: C, r: R });
+            if (!ws[cell_ref]) ws[cell_ref] = { t: 's', v: '' };
+            ws[cell_ref].s = { alignment: { vertical: "center", horizontal: "center", wrapText: true }, border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } } };
+            if (R <= 2) { ws[cell_ref].s.fill = { fgColor: { rgb: "E0E0E0" } }; ws[cell_ref].s.font = { bold: true }; }
+        }
+    }
+    ws['!cols'] = Array(19).fill({ wch: 12 });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "نتائج الري");
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+    // لقطة شاشة HD للمنحنى
+    const chartElement = document.querySelector('.chart-container');
+    const canvas = await html2canvas(chartElement, { scale: 3, useCORS: true, backgroundColor: "#ffffff" });
+    const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+
+    // التجميع في ZIP
+    const zip = new JSZip();
+    const dateStr = new Date().toLocaleDateString('ar-EG').replace(/\//g, '-');
+    zip.file(`Report_${dateStr}.xlsx`, excelBuffer);
+    zip.file(`Chart_${dateStr}.png`, imageBlob);
+
+    zip.generateAsync({type:"blob"}).then(content => {
+        saveAs(content, `Irrigation_Project_${dateStr}.zip`);
+    });
+};
+        window.clearAllHistory = function() {
+            if (confirm("هل أنت متأكد من حذف جميع بيانات السجل والمنحنى؟")) { 
+                localStorage.removeItem('irr_history'); 
+                localStorage.removeItem('chart_labels');
+                localStorage.removeItem('chart_f1'); localStorage.removeItem('chart_f2');
+                localStorage.removeItem('chart_f3'); localStorage.removeItem('chart_f4');
+                localStorage.removeItem('lastStoppedTime');
+                initChart();
+                loadHistory(); 
+            }
+        };
+    </script>
+    <script>
+        // ... كل الدوال القديمة بتاعتك (startTracking, addZeroPointToChart, إلخ) ...
+
+        // ضيف الكود ده هنا في الآخر بس "داخل" وسم الـ script
+        setInterval(() => {
+            if (typeof isWatering !== 'undefined' && isWatering) {
+                sessionData.rawStartTimes.forEach((startTime, i) => {
+                    if (startTime && !sessionData.rawEndTimes[i]) {
+                        const avgSoFar = sessionStats.sumFlow[i] / sessionStats.counts[i];
+                        const durHrsSoFar = (Date.now() - startTime) / 3600000;
+                        const previewVal = (avgSoFar * durHrsSoFar).toFixed(6);
+                        
+                        const element = document.getElementById(`p${i+1}`);
+                        if (element) {
+                            element.innerText = `كميات المياة التقريبية الحالية= ${previewVal} M3`;
+                        }
+                    }
+                });
+            }
+        }, 1000); 
+    </script>
+</body>
+</html>
+</body>
+</html>
