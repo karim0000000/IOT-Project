@@ -9,11 +9,48 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script> 
     <style>
-        :root { --f1: #3498db; --f2: #e74c3c; --f3: #f1c40f; --f4: #2ecc71; --bg: #f8f9fa; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #87CEEB; margin: 0; overflow-x: hidden; }
-        #login-page { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://scontent-hbe1-1.xx.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=pwJsQO6gcb0Q7kNvwErkW5C&_nc_oc=AdrChze-816Lq4kox_J0nhvfNTpsKp4Hsy4cNzdMgnspCWQPP9qux_S86EamOv4YW8A&_nc_zt=23&_nc_ht=scontent-hbe1-1.xx&_nc_gid=iWkLeZYXjc5E0CYG5K0Uwg&_nc_ss=7a30f&oh=00_AfxkfD9FKIE-fj5WR4zmEej5JGSuPhJeBM8GnZsIpWCpEw&oe=69C505C3'); background-size: cover; background-position: center; }
-        .login-card { background: rgba(255, 255, 255, 0.9); padding: 40px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
-        .login-card input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
+       :root { 
+    --f1: #3498db; 
+    --f2: #e74c3c; 
+    --f3: #f1c40f; 
+    --f4: #2ecc71; 
+    --bg: #f8f9fa; 
+}
+
+body { 
+    font-family: 'Segoe UI', Tahoma, sans-serif; 
+    background: #87CEEB; 
+    margin: 0; 
+    overflow-x: hidden; 
+}
+
+#login-page { 
+    height: 100vh; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    /* تم تحديث الرابط هنا وإضافة خصائص الضبط */
+    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                url('https://scontent-hbe1-1.xx.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=2285d6&_nc_ohc=NSQdzZpdRsMQ7kNvwExDrwG&_nc_oc=AdrvDjSJY8BME9OY81ct_I3bYF7BXHpTa28Ltj0PTgdXXsg3hSRHtnuTxCK8rVT5ehs&_nc_zt=23&_nc_ht=scontent-hbe1-1.xx&_nc_gid=VWmA2ZqeILvJFStPHzyZ6w&_nc_ss=7a389&oh=00_Af1mZNEQVP4ij_lViSOt-ySqoDJeJY3Pa7_mqyUuLRb6DA&oe=69D46743') no-repeat center center fixed; 
+    background-size: cover; 
+}
+
+.login-card { 
+    background: rgba(255, 255, 255, 0.9); 
+    padding: 40px; 
+    border-radius: 20px; 
+    width: 350px; 
+    text-align: center; 
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
+}
+
+.login-card input { 
+    width: 90%; 
+    padding: 12px; 
+    margin: 10px 0; 
+    border: 1px solid #ddd; 
+    border-radius: 8px; 
+}
         
         /* زرار دخول مطور */
         .btn-login { width: 100%; padding: 12px; background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3); }
@@ -166,6 +203,15 @@
             if (user) {
                 document.getElementById('login-page').style.display = 'none';
                 document.getElementById('globalLogout').style.display = 'block';
+                // الكود ده بيخلي المتصفح يراقب أي ضغطة زرار وأنت واقف في خانة البريد أو كلمة السر
+[document.getElementById('email'), document.getElementById('password')].forEach(input => {
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            // لو المستخدم داس Enter، كأننا دوسنا على زرار الدخول بالظبط
+            document.getElementById('loginBtn').click();
+        }
+    });
+});
                 if (localStorage.getItem('activePage') === 'dashboard') showDashboard(); 
                 else document.getElementById('welcome-page').style.display = 'flex';
             } else {
