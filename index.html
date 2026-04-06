@@ -126,7 +126,7 @@ body.dark-mode #menu-dropdown button {
         /* تأثير الزجاج الشفاف للكروت */
 /* تأثير الزجاج الشفاف للكروت */
 .box {
-    background: rgba(255, 255, 255, 0.7) !important;
+    background: rgb(255, 255, 255) !important;
     backdrop-filter: blur(10px); /* بيعمل غروشة للخلفية ورا الكارت */
     border: 1px solid rgba(255, 255, 255, 0.3);
     transition: transform 0.3s ease;
@@ -230,10 +230,11 @@ body.dark-mode .box[style*="var(--f4)"] {
 body.dark-mode #login-page, 
 body.dark-mode #welcome-page {
     background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                url('Ph3.png') no-repeat center center fixed !important;
+                url('Ph3.png') no-repeat center center !important; /* شيلنا fixed */
     background-size: cover !important;
+    background-attachment: scroll; /* أفضل للموبايل */
+    min-height: 100vh; /* تأكد إن الصفحة واخدة طول الشاشة */
 }
-
 /* تغيير لون خلفية الداشبورد في النايت مود */
 body.dark-mode #dashboard-page {
     background-color: #1a1a1a !important;
