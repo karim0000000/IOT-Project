@@ -11,6 +11,38 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
+        /* تنسيق الصندوق ليحتوي القطرات */
+.sidebar .box:first-child {
+    position: relative;
+    overflow: hidden; /* لمنع القطرات من الخروج عن حدود الصندوق */
+}
+
+/* شكل قطرة الماء */
+.drop {
+    position: absolute;
+    top: -20px;
+    width: 2px;
+    height: 10px;
+    background-color: #3498db;
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: fall linear infinite;
+    pointer-events: none; /* عشان ما تعطلش الضغط على أي حاجة */
+}
+
+/* حركة السقوط من أعلى لأسفل */
+@keyframes fall {
+    to {
+        transform: translateY(150px); /* المسافة التي تقطعها القطرة */
+        opacity: 0;
+    }
+}
+
+/* لون نيون للقطرات في وضع الليل */
+body.dark-mode .drop {
+    background-color: #00f2ff;
+    box-shadow: 0 0 5px #00f2ff;
+}
         /* أضف هذا داخل وسم الـ <style> */
 body.dark-mode #google-map-iframe {
     filter: invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%);
@@ -18,7 +50,7 @@ body.dark-mode #google-map-iframe {
 }
         /* ألوان وضع الليل الاحترافية */
 body.dark-mode {
-    background: #0b0e14 !important; /* خلفية داكنة جداً */
+    background: #140b0c !important; /* خلفية داكنة جداً */
     color: #00f2ff !important;
 }
 
@@ -31,11 +63,40 @@ body.dark-mode .box {
 }
 
 /* تعديل ألوان النصوص داخل الكروت */
-body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, 
-body.dark-mode h4, body.dark-mode span, body.dark-mode div {
-    color: #00f2ff !important;
+/* العناوين الرئيسية: لون أخضر هادئ وواضح */
+body.dark-mode h1, 
+body.dark-mode h2 {
+    color: #0e0e0e !important; /* أخضر زمردي مريح */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3); /* ظل خفيف لإبراز الخط */
 }
 
+/* العناوين الفرعية: لون أخضر فاتح جداً يميل للأبيض */
+body.dark-mode h3, 
+body.dark-mode h4 {
+    color: #ef3c3c !important; 
+}
+
+/* النصوص العادية والفقرات: لون رمادي فاتح جداً (أفضل بكتير للعين من الأخضر الفاقع) */
+body.dark-mode span, 
+body.dark-mode p,
+body.dark-mode label {
+    color: #f7d307 !important;
+}
+
+/* العناصر المميزة أو الأرقام داخل الـ div */
+body.dark-mode .highlight, 
+body.dark-mode strong {
+    color: #00ff44 !important; /* الأخضر القوي نستخدمه فقط للحاجات المهمة */
+}
+body.dark-mode #nightModeWarning {
+    border: 1px solid #ff007f !important; /* لون نيون وردي أو برتقالي */
+    background: rgba(255, 0, 127, 0.05) !important;
+    box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+}
+
+body.dark-mode #nightModeWarning span {
+    color: #ff007f !important; /* تغيير لون الخط ليناسب النيون */
+}
 /* تخصيص ألوان الفلو سينسور الأربعة (القيم العلوية) */
 body.dark-mode #v1 { color: var(--f1) !important; font-weight: bold; }
 body.dark-mode #v2 { color: var(--f2) !important; font-weight: bold; }
@@ -96,7 +157,7 @@ body.dark-mode #menu-dropdown button {
        /* الألوان الافتراضية (النهار) */
 :root {
     --bg-main: #87CEEB;
-    --box-bg: rgba(255, 255, 255, 0.7);
+    --box-bg: rgba(255, 255, 255, 0.962);
     --text-color: #000;
     --chart-grid: #ddd;
     /* إضافة ألوان الرشاشات المحددة من المنحنى */
@@ -141,18 +202,41 @@ body.dark-mode .box[style*="var(--f4)"] {
 .box[style*="var(--f2)"] { color: var(--f2); }
 .box[style*="var(--f3)"] { color: var(--f3); }
 .box[style*="var(--f4)"] { color: var(--f4); }
+/* --- 1. إعدادات الخلفية للوضع الطبيعي (النهار) --- */
+
+/* صفحة اللوجن */
 #login-page {
-    
-    
-    display: none; 
-    height: 100vh; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    /* تم تحديث الرابط هنا وإضافة خصائص الضبط */
     background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
-                url('https://scontent-hbe1-1.xx.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=2285d6&_nc_ohc=NSQdzZpdRsMQ7kNvwExDrwG&_nc_oc=AdrvDjSJY8BME9OY81ct_I3bYF7BXHpTa28Ltj0PTgdXXsg3hSRHtnuTxCK8rVT5ehs&_nc_zt=23&_nc_ht=scontent-hbe1-1.xx&_nc_gid=VWmA2ZqeILvJFStPHzyZ6w&_nc_ss=7a389&oh=00_Af1mZNEQVP4ij_lViSOt-ySqoDJeJY3Pa7_mqyUuLRb6DA&oe=69D46743') no-repeat center center fixed; 
-    background-size: cover; 
+                url('https://scontent.fcai11-1.fna.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=l6l6l-carw0Q7kNvwEY-uTL&_nc_oc=Ado13DQaoI_TgcQE14jq91ZdW12rXaGbJpGD69ia6vUvQ1o7XCSZSzNGZLjn1JbUqq0BOUX_amO857O03c8AVAnY&_nc_zt=23&_nc_ht=scontent.fcai11-1.fna&_nc_gid=oPpDmxIbNGGwC5YKi-rcSg&_nc_ss=7a389&oh=00_Af2yh1UrKOozUhJMRiJVMwSceTU0a1Xf-v66ifJqa_Ckvw&oe=69D89403') no-repeat center center fixed;
+    background-size: cover;
+}
+
+/* صفحة الترحيب */
+#welcome-page {
+    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
+                url('https://scontent.fcai11-1.fna.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=l6l6l-carw0Q7kNvwEY-uTL&_nc_oc=Ado13DQaoI_TgcQE14jq91ZdW12rXaGbJpGD69ia6vUvQ1o7XCSZSzNGZLjn1JbUqq0BOUX_amO857O03c8AVAnY&_nc_zt=23&_nc_ht=scontent.fcai11-1.fna&_nc_gid=oPpDmxIbNGGwC5YKi-rcSg&_nc_ss=7a389&oh=00_Af2yh1UrKOozUhJMRiJVMwSceTU0a1Xf-v66ifJqa_Ckvw&oe=69D89403') no-repeat center center fixed;
+    background-size: cover;
+}
+
+/* صفحة الداشبورد (لو عايز لها خلفية برضه) */
+#dashboard-page {
+    background-color: #f4f4f4; /* أو حط رابط صورة لو تحب */
+}
+
+
+/* --- 2. إعدادات الخلفية لوضع الليل (النايت مود) --- */
+
+/* لما نفعل النايت مود.. غير خلفية اللوجن والترحيب للصورة الجديدة */
+body.dark-mode #login-page, 
+body.dark-mode #welcome-page {
+    background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                url('Ph3.png') no-repeat center center fixed !important;
+    background-size: cover !important;
+}
+
+/* تغيير لون خلفية الداشبورد في النايت مود */
+body.dark-mode #dashboard-page {
+    background-color: #1a1a1a !important;
 }
 .login-card { 
     background: rgba(255, 255, 255, 0.9); 
@@ -201,10 +285,10 @@ body.dark-mode .box[style*="var(--f4)"] {
         #dashboard-page { padding: 20px; background: var(--bg); min-height: 100vh; padding-bottom: 120px; }
         .main-layout { display: flex; flex-wrap: wrap; flex-direction: row-reverse; gap: 20px; justify-content: center; }
         .chart-box { flex: 2; min-width: 600px; order: 1; position: relative; padding-bottom: 80px; }
-        .sidebar { flex: 1; min-width: 350px; order: 2; display: flex; flex-direction: column; }
-        .box { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .sidebar { flex: 1; min-width: 350px; order: 2; display: flex; flex-direction: column;height: auto; }
+        .box { background: rgb(255, 255, 255); border-radius: 15px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
         .chart-container { height: 500px; width: 100%; }
-        .scroll-area { height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+        .scroll-area { height: 400px; overflow-y: auto; border: 1px solid #0124e9; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85em; text-align: center; }
         th, td { border: 1px solid #0d0d0d; padding: 8px; vertical-align: middle; }
         .grid-cell { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: #ddd; border: 1px solid #ccc; }
@@ -235,7 +319,17 @@ body.dark-mode .sub-val[style*="--f4"] { color: #00ff41 !important; text-shadow:
     background: transparent !important;
     border: none !important;
 }
+/* تخصيص أسماء المهندسين العشرة في وضع الليل */
+body.dark-mode .credits-section h2 p {
+    color: #0004ff !important; /* لون أزرق نيون احترافي ليناسب الـ Dark Mode */
+    text-shadow: 0 0 5px rgba(0, 242, 255, 0.5); /* توهج خفيف لزيادة الوضوح */
+}
 
+/* تخصيص اسم المشرف في وضع الليل */
+body.dark-mode .credits-section h1 p {
+    color: #ff4d4d !important; /* لون أحمر واضح للمشرف */
+    text-shadow: 0 0 5px rgba(255, 77, 77, 0.5);
+}
 body.dark-mode .grid-cell {
     background: rgba(0, 242, 255, 0.05) !important; /* لون شبكة الجدول في وضع الليل */
 }
@@ -300,8 +394,8 @@ body.dark-mode .grid-cell {
 </div>
     <div id="welcome-page" style="height: 100vh; flex-direction: column; align-items: center; justify-content: center; background: url('https://www.vidaenlatierra.com/wp-content/uploads/2020/11/monocultivos-circulares.jpg') center/cover;">
         <div style="background: rgba(255,255,255,0.95); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-            <h1 style="color:#2c3e50;">نظام IOT المطور للري الذكي</h1>
-            <button style="padding: 15px 60px; font-size: 1.3em; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; font-weight: bold;" onclick="showDashboard()">جهاز 1 💧</button>
+            <h1 style="color:#2c3e50;">نظام IOT   </h1>
+            <button style="padding: 15px 60px; font-size: 1.3em; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; font-weight: bold;" onclick="showDashboard()">جهاز 1 </button>
         </div>
         <div class="credits-section" style="margin-top: 20px; background: rgba(255,255,255,0.8); padding: 15px; border-radius: 10px; text-align: center;">
             <h1 style="margin:5px;">إعداد المهندسين:</h1>
@@ -353,7 +447,7 @@ body.dark-mode .grid-cell {
                 </div>
                 <div class="box" style="height: 250px; display: flex; flex-direction: column;">
                     <h4 style="color:red; text-align:center; margin:0 0 10px 0;">⚠️ سجل الأعطال</h4>
-                    <div id="errorLog" style="flex-grow: 1; overflow-y: auto; background: #fff5f5; border-radius: 8px; padding: 10px;"></div>
+                    <div id="errorLog" style="flex-grow: 1; overflow-y: auto; background: #fff9f5; border-radius: 8px; padding: 10px;"></div>
                 </div>
                 <div class="box">
                     <h4 style="text-align:center; margin:0 0 10px 0;">📊 سجل الري</h4>
@@ -370,13 +464,29 @@ body.dark-mode .grid-cell {
                             <tbody></tbody>
                         </table>
                     </div>
-                    <div style="display:flex; gap:10px; margin-top:15px;">
-                        <button onclick="exportToExcel()" class="btn-modern btn-excel" style="background:#e6b208; color:white; padding:10px; border-radius:8px; cursor:pointer; border:none; flex:1;">
-                            <span>طباعة الملف</span> 📊
-                        </button>
-                        <button onclick="clearAllHistory()" class="btn-modern btn-delete" style="background:#e74c3c; color:white; padding:10px; border-radius:8px; cursor:pointer; border:none; flex:1;">
-                            <span>حذف السجل</span> 🗑️
-                        </button>
+                    <div style="display: flex; gap: 10px; width: 100%; margin-top: 30px;"> 
+    <button onclick="exportToExcel()" class="btn-modern btn-excel" style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: none; background: #534001; color: rgb(255, 255, 255); font-weight: bold;">
+        طباعة الملف 📊
+    </button>
+    <button onclick="clearAllHistory()" class="btn-modern btn-delete" style="flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; border: none; background: #f10d0d; color: rgb(255, 255, 255); font-weight: bold;">
+        حذف السجل 🗑️
+    </button>
+</div>
+
+<div id="nightModeWarning" style="
+    display: none; 
+    width: fit-content;      /* لجعل الصندوق ينكمش على قدر النص فقط */
+    margin: 15px auto 0;     /* المسافة 15px ومن اليمين واليسار auto للتوسيط */
+    padding: 5px 15px;       /* حشوة جانبية تعطي شكل أنيق */
+    border: 1px solid #ffcc00; 
+    background: rgba(255, 204, 0, 0.05); 
+    border-radius: 20px;     /* حواف دائرية تجعله كـ "تاق" احترافي */
+    text-align: center;
+">
+    <span style="color: #ffcc00; font-size: 1.5em; font-weight: bold; white-space: nowrap;">
+        ⚠️ يفضل عدم طباعة الملف عند تفعيل وضع الليل
+    </span>
+</div>
                     </div>
                 </div>
             </div>
@@ -384,6 +494,33 @@ body.dark-mode .grid-cell {
     </div>
 
     <script type="module">
+        function createWaterDrop() {
+    // نتأكد أولاً أن النظام يعمل
+    if (!isWatering) return;
+
+    const statusBox = document.querySelector('.sidebar .box:first-child');
+    if (!statusBox) return;
+
+    const drop = document.createElement('div');
+    drop.classList.add('drop');
+    
+    // وضع القطرة في مكان عشوائي أفقياً داخل الصندوق
+    drop.style.left = Math.random() * 100 + '%';
+    
+    // سرعة عشوائية للسقوط ليعطي شكلاً واقعياً
+    const duration = Math.random() * 1 + 0.5;
+    drop.style.animationDuration = duration + 's';
+    
+    statusBox.appendChild(drop);
+
+    // حذف عنصر القطرة بعد انتهاء الأنميشن لتجنب ثقل الصفحة
+    setTimeout(() => {
+        drop.remove();
+    }, duration * 1000);
+}
+
+// تشغيل صناعة القطرات باستمرار كل 100 مللي ثانية
+setInterval(createWaterDrop, 1);
         const themeToggle = document.getElementById('themeToggle');
 const themeText = document.getElementById('themeText');
 const themeIcon = document.getElementById('themeIcon');
@@ -395,6 +532,17 @@ themeToggle.onclick = () => {
     // تغيير النص والأيقونة
     themeText.innerText = isDark ? "وضع النهار" : "وضع الليل";
     themeIcon.innerText = isDark ? "☀️" : "🌙";
+    
+    // --- الجزء الجديد الخاص بالتحذير ---
+    // داخل وظيفة التبديل themeToggle.onclick
+// داخل كود themeToggle.onclick
+const warningBox = document.getElementById('nightModeWarning');
+if (document.body.classList.contains('dark-mode')) {
+    warningBox.style.display = 'block'; // يظهر فقط في وضع الليل
+} else {
+    warningBox.style.display = 'none';  // يختفي في وضع النهار
+}
+    // ---------------------------------
     
     // تحديث ألوان المنحنى فوراً
     updateChartColors(isDark);
@@ -593,7 +741,7 @@ function startTracking() {
 
         if (anyFlow) {
             isWatering = true;
-            document.getElementById('mainStatus').innerText = "جهاز 1 قيد التشغيل الآن ...💧";
+            document.getElementById('mainStatus').innerText = "جهاز 1 قيد التشغيل الآن ...";
 
             f.forEach((v, i) => {
                 if (v > 0.1) {
@@ -1044,8 +1192,5 @@ setTimeout(() => {
             }
         });
     </script>
-
-</body>
-</html>
 </body>
 </html>
