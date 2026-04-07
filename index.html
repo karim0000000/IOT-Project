@@ -1262,10 +1262,15 @@ window.exportToExcel = async function() {
         pdf.setFontSize(18);
 
         // --- بداية التعديل لإصلاح التشويه فقط ---
-        pdf.setFont("helvetica", "bold"); 
-        pdf.setFontSize(18);
-        pdf.setTextColor(40);
-        pdf.text("IoT Irrigation System Report", 105, 15, { align: "center" });
+        // قبل سطر كتابة النص، ضيف السطر ده عشان تضمن نوع الخط
+pdf.setFont("helvetica", "bold"); 
+pdf.setFontSize(18);
+pdf.text("IoT Irrigation System Report", 105, 15, { align: "center" });
+
+// وللتاريخ كمان
+pdf.setFont("helvetica", "normal");
+pdf.setFontSize(10);
+pdf.text(`Generated: ${new Date().toLocaleString('en-US')}`, 105, 22, { align: "center" });
 
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(10);
