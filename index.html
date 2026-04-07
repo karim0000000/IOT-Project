@@ -215,16 +215,16 @@ tbody {
     display: table-row-group;
 }
 /* صفحة اللوجن */
+/* ابحث عن هذا الجزء واستبدله بالكامل */
 #login-page {
     background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
                 url('https://scontent.fcai11-1.fna.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=l6l6l-carw0Q7kNvwEY-uTL&_nc_oc=Ado13DQaoI_TgcQE14jq91ZdW12rXaGbJpGD69ia6vUvQ1o7XCSZSzNGZLjn1JbUqq0BOUX_amO857O03c8AVAnY&_nc_zt=23&_nc_ht=scontent.fcai11-1.fna&_nc_gid=oPpDmxIbNGGwC5YKi-rcSg&_nc_ss=7a389&oh=00_Af2yh1UrKOozUhJMRiJVMwSceTU0a1Xf-v66ifJqa_Ckvw&oe=69D89403') no-repeat center center fixed;
     background-size: cover;
 }
 
-/* صفحة الترحيب */
 #welcome-page {
     background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
-                url('https://scontent.fcai11-1.fna.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=l6l6l-carw0Q7kNvwEY-uTL&_nc_oc=Ado13DQaoI_TgcQE14jq91ZdW12rXaGbJpGD69ia6vUvQ1o7XCSZSzNGZLjn1JbUqq0BOUX_amO857O03c8AVAnY&_nc_zt=23&_nc_ht=scontent.fcai11-1.fna&_nc_gid=oPpDmxIbNGGwC5YKi-rcSg&_nc_ss=7a389&oh=00_Af2yh1UrKOozUhJMRiJVMwSceTU0a1Xf-v66ifJqa_Ckvw&oe=69D89403') no-repeat center center fixed;
+                url('https://scontent.fcai11-1.fna.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=l6l6l-carw0Q7kNvwEY-uTL&_nc_oc=Ado13DQaoI_TgcQE14jq91ZdW12rXaGbJpGD69ia6vUvQ1o7XCSZSzNGZLjn1JbUqq0BOUX_amO857O03c8AVAnY&_nc_zt=23&_nc_ht=scontent.fcai11-1.fna&_nc_gid=oPpDmxIbNGGwC5YKi-rcSg&_nc_ss=7a389&oh=00_Af1mZNEQVP4ij_lViSOt-ySqoDJeJY3Pa7_mqyUuLRb6DA&oe=69D46743') no-repeat center center fixed;
     background-size: cover;
 }
 
@@ -239,20 +239,10 @@ tbody {
 /* لما نفعل النايت مود.. غير خلفية اللوجن والترحيب للصورة الجديدة */
 body.dark-mode #login-page, 
 body.dark-mode #welcome-page {
-    body {
-    background-image: url('img.jpg');
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: cover;
-    /* التعديل المهم هنا: شلنا fixed وخليناها scroll أو شلناها خالص */
-    background-attachment: scroll; 
-    min-height: 100vh;
-    margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: 'Cairo', sans-serif;
-}/
+    background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                url('Ph3.png') no-repeat center center !important; 
+    background-size: cover !important;
+    background-attachment: scroll !important; /* خليناها scroll بدل fixed */
 }
 /* تغيير لون خلفية الداشبورد في النايت مود */
 body.dark-mode #dashboard-page {
@@ -402,7 +392,7 @@ body.dark-mode #nightModeWarning span {
         #login-page, #welcome-page, #dashboard-page { display: none; }
     </style>
 
-    <div id="login-page" style="height: 100vh; align-items: center; justify-content: center; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://scontent-hbe1-1.xx.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=2285d6&_nc_ohc=NSQdzZpdRsMQ7kNvwExDrwG&_nc_oc=AdrvDjSJY8BME9OY81ct_I3bYF7BXHpTa28Ltj0PTgdXXsg3hSRHtnuTxCK8rVT5ehs&_nc_zt=23&_nc_ht=scontent-hbe1-1.xx&_nc_gid=VWmA2ZqeILvJFStPHzyZ6w&_nc_ss=7a389&oh=00_Af1mZNEQVP4ij_lViSOt-ySqoDJeJY3Pa7_mqyUuLRb6DA&oe=69D46743') no-repeat center center fixed; background-size: cover;">
+    <div id="login-page" style="height: 100vh; align-items: center; justify-content: center; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://scontent.fcai11-1.fna.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=l6l6l-carw0Q7kNvwEY-uTL&_nc_oc=Ado13DQaoI_TgcQE14jq91ZdW12rXaGbJpGD69ia6vUvQ1o7XCSZSzNGZLjn1JbUqq0BOUX_amO857O03c8AVAnY&_nc_zt=23&_nc_ht=scontent.fcai11-1.fna&_nc_gid=oPpDmxIbNGGwC5YKi-rcSg&_nc_ss=7a389&oh=00_Af2yh1UrKOozUhJMRiJVMwSceTU0a1Xf-v66ifJqa_Ckvw&oe=69D89403') no-repeat center center fixed; background-size: cover;">
         <div class="login-card">
             <h2>تسجيل الدخول</h2>
             <input type="email" id="email" placeholder="البريد الإلكتروني">
