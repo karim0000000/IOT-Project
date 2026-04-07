@@ -1251,44 +1251,36 @@ window.exportToExcel = async function() {
 
         // بناء ملف الـ PDF الاحترافي (A4)
 
+        // 1. تحديد نوع المستند (تأكد إن السطرين دول في أول الدالة)
         const { jsPDF } = window.jspdf;
-
         const pdf = new jsPDF('p', 'mm', 'a4');
 
-
-
-        // إضافة العناوين (متوسطة)
-
+        // --- الجزء ده هو اللي فيه الحل السحري ---
+        // بنحدد الخط "Helvetica" لأنه خط Built-in مش بيحتاج تحميل ومستحيل يتشوه
+        pdf.setFont("helvetica", "bold");
         pdf.setFontSize(18);
+        pdf.setTextColor(40, 40, 40);
 
-        // --- بداية التعديل لإصلاح التشويه فقط ---
-        // قبل سطر كتابة النص، ضيف السطر ده عشان تضمن نوع الخط
-// 1. إعداد الخط واللون
-pdf.setFont("helvetica", "bold");
-pdf.setFontSize(18);
-pdf.setTextColor(40, 40, 40);
+        // كتابة النص مع إضافة ميزة (R2L: false) عشان نوقف أي مكتبة عربي بتحاول تعكس الحروف
+        pdf.text("IoT Irrigation System Report", 105, 15, { 
+            align: "center",
+            R2L: false // إيقاف الكتابة من اليمين لليار للنص ده بالذات
+        });
 
-// 2. كتابة العنوان مع تحديد المسافات بين الحروف (charSpace: 0) لمنع التداخل
-pdf.text("IoT Irrigation System Report", 105, 15, { 
-    align: "center",
-    charSpace: 0 
-});
+        // التاريخ بالإنجليزية
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        const dateNow = new Date().toLocaleString('en-US');
+        pdf.text(`Generated: ${dateNow}`, 105, 22, { 
+            align: "center",
+            R2L: false 
+        });
 
-// 3. إعداد التاريخ
-pdf.setFont("helvetica", "normal");
-pdf.setFontSize(10);
-pdf.setTextColor(100, 100, 100);
-const reportDate = new Date().toLocaleString('en-US');
-
-// 4. كتابة التاريخ بوضوح
-pdf.text(`Generated: ${reportDate}`, 105, 22, { 
-    align: "center",
-    charSpace: 0 
-});
-
-// 5. رسم الخط الفاصل
-pdf.setDrawColor(200, 200, 200);
-pdf.line(20, 25, 190, 25);
+        // خط فاصل نظيف
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(20, 25, 190, 25);
+        // --- نهاية التعديل ---
 
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(10);
