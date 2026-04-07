@@ -239,10 +239,20 @@ tbody {
 /* لما نفعل النايت مود.. غير خلفية اللوجن والترحيب للصورة الجديدة */
 body.dark-mode #login-page, 
 body.dark-mode #welcome-page {
-    background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                url('Ph3.png') no-repeat center center !important; 
-    background-size: cover !important;
-    background-attachment: scroll !important; /* خليناها scroll بدل fixed */
+    body {
+    background-image: url('img.jpg');
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    /* التعديل المهم هنا: شلنا fixed وخليناها scroll أو شلناها خالص */
+    background-attachment: scroll; 
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Cairo', sans-serif;
+}/
 }
 /* تغيير لون خلفية الداشبورد في النايت مود */
 body.dark-mode #dashboard-page {
