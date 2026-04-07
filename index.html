@@ -1263,14 +1263,32 @@ window.exportToExcel = async function() {
 
         // --- بداية التعديل لإصلاح التشويه فقط ---
         // قبل سطر كتابة النص، ضيف السطر ده عشان تضمن نوع الخط
-pdf.setFont("helvetica", "bold"); 
+// 1. إعداد الخط واللون
+pdf.setFont("helvetica", "bold");
 pdf.setFontSize(18);
-pdf.text("IoT Irrigation System Report", 105, 15, { align: "center" });
+pdf.setTextColor(40, 40, 40);
 
-// وللتاريخ كمان
+// 2. كتابة العنوان مع تحديد المسافات بين الحروف (charSpace: 0) لمنع التداخل
+pdf.text("IoT Irrigation System Report", 105, 15, { 
+    align: "center",
+    charSpace: 0 
+});
+
+// 3. إعداد التاريخ
 pdf.setFont("helvetica", "normal");
 pdf.setFontSize(10);
-pdf.text(`Generated: ${new Date().toLocaleString('en-US')}`, 105, 22, { align: "center" });
+pdf.setTextColor(100, 100, 100);
+const reportDate = new Date().toLocaleString('en-US');
+
+// 4. كتابة التاريخ بوضوح
+pdf.text(`Generated: ${reportDate}`, 105, 22, { 
+    align: "center",
+    charSpace: 0 
+});
+
+// 5. رسم الخط الفاصل
+pdf.setDrawColor(200, 200, 200);
+pdf.line(20, 25, 190, 25);
 
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(10);
