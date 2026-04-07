@@ -1261,7 +1261,22 @@ window.exportToExcel = async function() {
 
         pdf.setFontSize(18);
 
+        // --- بداية التعديل لإصلاح التشويه فقط ---
+        pdf.setFont("helvetica", "bold"); 
+        pdf.setFontSize(18);
+        pdf.setTextColor(40);
         pdf.text("IoT Irrigation System Report", 105, 15, { align: "center" });
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor(100);
+        // التاريخ بالإنجليزية لضمان عدم حدوث تشويه
+        const dateStrEN = new Date().toLocaleString('en-US');
+        pdf.text(`Generated: ${dateStrEN}`, 105, 22, { align: "center" });
+
+        pdf.setLineWidth(0.5);
+        pdf.line(20, 25, 190, 25);
+        // --- نهاية التعديل ---
 
         pdf.setFontSize(10);
 
