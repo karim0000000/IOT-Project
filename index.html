@@ -1309,24 +1309,14 @@ const zip = new JSZip();
 const finalDate = new Date().toISOString().slice(0,10); // بديل لـ dateStr لو مش موجودة
 zip.file(`Detailed_Report_${finalDate}.xlsx`, typeof excelBuffer !== 'undefined' ? excelBuffer : "");
 zip.file(`Summary_Report_${finalDate}.pdf`, docBlob);
+const chartBlob = await new Promise(resolve => chartCanvas.toBlob(resolve, 'image/png'));
+
+        zip.file(`Chart_Analysis_${dateStr}.png`, chartBlob);
 
 // سطر التحميل (ضروري جداً عشان ميدي مش خطأ)
 zip.generateAsync({type:"blob"}).then(function(content) {
     saveAs(content, `Project_Files_${finalDate}.zip`);
 });
-
-        
-
-        const chartBlob = await new Promise(resolve => chartCanvas.toBlob(resolve, 'image/png'));
-
-        zip.file(`Chart_Analysis_${dateStr}.png`, chartBlob);
-
-
-
-        const zipContent = await zip.generateAsync({type:"blob"});
-
-        saveAs(zipContent, `Irrigation_Project_Data_${dateStr}.zip`);
-
 
 
     } catch (error) {
