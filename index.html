@@ -141,7 +141,7 @@ body.dark-mode #menu-dropdown button {
 #historyTable thead th {
     position: sticky;
     top: 0; /* يثبت العناوين في أعلى الحاوية */
-    background-color: #3786f6; /* نفس لون خلفية الجدول لعدم تداخل الكلام */
+    background-color: var(--card-bg); /* نفس لون خلفية الجدول لعدم تداخل الكلام */
     z-index: 0; /* لضمان ظهور العنوان فوق الصفوف أثناء التمرير */
     border-bottom: 3px solid #020202; /* خط فاصل لتمييز العناوين */
     border-top: 3px solid #020202; /* خط فاصل لتمييز العناوين */
@@ -203,7 +203,17 @@ body.dark-mode .box[style*="var(--f4)"] {
 .box[style*="var(--f3)"] { color: var(--f3); }
 .box[style*="var(--f4)"] { color: var(--f4); }
 /* --- 1. إعدادات الخلفية للوضع الطبيعي (النهار) --- */
-
+table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+}
+thead {
+    display: table-header-group;
+}
+tbody {
+    display: table-row-group;
+}
 /* صفحة اللوجن */
 #login-page {
     background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), 
@@ -350,6 +360,22 @@ body.dark-mode .grid-cell {
         .btn-excel:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(243, 156, 18, 0.4); background: linear-gradient(135deg, #e67e22, #d35400); }
         .btn-delete { background: linear-gradient(135deg, #e74c3c, #c0392b); }
         .btn-delete:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4); background: linear-gradient(135deg, #c0392b, #a93226); }
+    /* تنسيق الرسالة في وضع النهار */
+/* تنسيق الرسالة لضمان التوسيط تحت الأزرار */
+#nightModeWarning {
+    clear: both;
+    width: 100%;
+}
+
+/* وضع الليل - تغيير ألوان البرواز والخلفية والنص */
+body.dark-mode #nightModeWarning div {
+    border-color: #ff007f !important;
+    background: rgba(255, 0, 127, 0.1) !important;
+}
+
+body.dark-mode #nightModeWarning span {
+    color: #ff007f !important;
+}
     </style>
 </head>
 <body>
@@ -399,8 +425,8 @@ body.dark-mode .grid-cell {
         </div>
         <div class="credits-section" style="margin-top: 20px; background: rgba(255,255,255,0.8); padding: 15px; border-radius: 10px; text-align: center;">
             <h1 style="margin:5px;">إعداد المهندسين:</h1>
-            <h2><p style="margin:0; font-weight:bold; color:#0e06ee;">م/كريم  عمرو || م/نادر رامز || م/أمنية علاء || م/نجوى وجيه || م/فاطمة علي</p></h2>
-            <h2><p style="margin:0; font-weight:bold; color:#0e06ee;">م/الشيماء جمال ||م/أحمد ياسر|| م/أحمد باسم || م/أمين حجاج || م/سيف الدين حسين</p>
+            <h2><p style="margin:0; font-weight:bold; color:#0e06ee;">م/الشيماء جمال— م/أحمد ياسر— م/أحمد باسم— م/أمنية علاء— م/أمين حجاج</p></h2>
+            <h2><p style="margin:0; font-weight:bold; color:#0e06ee;"> م/سيف الدين حسين— م/فاطمة علي— م/كريم عمرو— م/نادر رامز— م/نجوى وجيه</p>
             <h1 style="margin:5px;">تحت إشراف:</h1>
             <h1><p style="margin:0; font-weight:bold; color:#f70505;">أ.د/ياسرعزت</p></h1>
         </div>
@@ -453,7 +479,7 @@ body.dark-mode .grid-cell {
                     <h4 style="text-align:center; margin:0 0 10px 0;">📊 سجل الري</h4>
                     <div class="scroll-area" style="max-height: 400px; overflow-y: auto;">
                         <table id="historyTable">
-                            <thead>
+                            <thead style="background-color: #2980b9; color: white;">
                                 <tr>
                                     <th>العملية</th>
                                     <th>التاريخ</th>
@@ -475,18 +501,21 @@ body.dark-mode .grid-cell {
 
 <div id="nightModeWarning" style="
     display: none; 
-    width: fit-content;      /* لجعل الصندوق ينكمش على قدر النص فقط */
-    margin: 15px auto 0;     /* المسافة 15px ومن اليمين واليسار auto للتوسيط */
-    padding: 5px 15px;       /* حشوة جانبية تعطي شكل أنيق */
+    width: fit-content; 
+    margin: 15px 0 0 auto; 
+    padding: 5px 15px; 
     border: 1px solid #ffcc00; 
     background: rgba(255, 204, 0, 0.05); 
-    border-radius: 20px;     /* حواف دائرية تجعله كـ "تاق" احترافي */
-    text-align: center;
+    border-radius: 20px; 
+    text-align: right; 
+    direction: rtl;
 ">
     <span style="color: #ffcc00; font-size: 1.5em; font-weight: bold; white-space: nowrap;">
-        ⚠️ يفضل عدم طباعة الملف عند تفعيل وضع الليل
+        ⚠️ جاري تجهيز الملفات.. انتظر قليلاً
     </span>
 </div>
+</div>
+
                     </div>
                 </div>
             </div>
@@ -533,15 +562,7 @@ themeToggle.onclick = () => {
     themeText.innerText = isDark ? "وضع النهار" : "وضع الليل";
     themeIcon.innerText = isDark ? "☀️" : "🌙";
     
-    // --- الجزء الجديد الخاص بالتحذير ---
-    // داخل وظيفة التبديل themeToggle.onclick
-// داخل كود themeToggle.onclick
-const warningBox = document.getElementById('nightModeWarning');
-if (document.body.classList.contains('dark-mode')) {
-    warningBox.style.display = 'block'; // يظهر فقط في وضع الليل
-} else {
-    warningBox.style.display = 'none';  // يختفي في وضع النهار
-}
+   
     // ---------------------------------
     
     // تحديث ألوان المنحنى فوراً
@@ -1021,118 +1042,320 @@ function updateChart(f) {
 
 // 3. دالة الإكسل المحدثة (شاملة التنسيق القديم + الصورة HD + ملف ZIP)
 window.exportToExcel = async function() {
+    const isDarkMode = document.body.classList.contains('dark-mode');
+
+    // 1. إظهار رسالة التحذير فوراً عند الضغط
+
+    const warningBox = document.getElementById('nightModeWarning');
+
+    if (warningBox) warningBox.style.display = 'block';
+
+
+
     const history = JSON.parse(localStorage.getItem('irr_history') || "[]");
-    if (history.length === 0) { alert("السجل فارغ"); return; }
+
+    if (history.length === 0) { 
+
+        alert("السجل فارغ"); 
+
+        if (warningBox) warningBox.style.display = 'none';
+
+        return; 
+
+    }
+
+
+
+    // حفظ حالة الوضع الليلي الحالية
+
 
     const dateStr = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
 
-    // --- 1. إعادة برمجة شيت الإكسيل الأصلية (بكل تفاصيلها) ---
-    let dataArr = [
-        ["تقرير نظام IOT (مشروع تخرج المستوى الرابع)"],
-        ["العملية", "التاريخ", "اليوم", "بداية التشغيل", "", "", "", "نهاية التشغيل", "", "", "", "زمن التشغيل", "", "", "", "كمية المياه (M3)", "", "", ""],
-        ["", "", "", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "F1", "F2", "F3", "F4"]
-    ];
 
-    history.forEach(row => {
-        dataArr.push([
-            row.id, 
-            row.date, 
-            row.day, 
-            ...(row.startTimes || ["-","-","-","-"]), 
-            ...(row.endTimes || ["-","-","-","-"]), 
-            ...(row.durations || ["-","-","-","-"]), 
-            ...(row.amounts || ["0","0","0","0"])
-        ]);
-    });
 
-    const ws = XLSX.utils.aoa_to_sheet(dataArr);
-    
-    // إعدادات الدمج (Merges) الأصلية
-    ws['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 18 } }, 
-        { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } }, 
-        { s: { r: 1, c: 1 }, e: { r: 2, c: 1 } }, 
-        { s: { r: 1, c: 2 }, e: { r: 2, c: 2 } }, 
-        { s: { r: 1, c: 3 }, e: { r: 1, c: 6 } }, 
-        { s: { r: 1, c: 7 }, e: { r: 1, c: 10 } }, 
-        { s: { r: 1, c: 11 }, e: { r: 1, c: 14 } }, 
-        { s: { r: 1, c: 15 }, e: { r: 1, c: 18 } }
-    ];
+    try {
 
-    // إعادة تنسيق الخلايا (الألوان، الحدود، المحاذاة) كما كانت في كودك الأصلي
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cell_ref = XLSX.utils.encode_cell({ c: C, r: R });
-            if (!ws[cell_ref]) ws[cell_ref] = { t: 's', v: '' };
-            ws[cell_ref].s = { 
-                alignment: { vertical: "center", horizontal: "center", wrapText: true }, 
-                border: { 
-                    top: { style: "thin" }, bottom: { style: "thin" }, 
-                    left: { style: "thin" }, right: { style: "thin" } 
-                } 
-            };
-            if (R <= 2) { 
-                ws[cell_ref].s.fill = { fgColor: { rgb: "E0E0E0" } }; 
-                ws[cell_ref].s.font = { bold: true }; 
+        // --- 1. إعداد شيت الإكسيل (الإعدادات الأصلية الكاملة) ---
+
+        let dataArr = [
+
+            ["تقرير نظام IOT (مشروع تخرج المستوى الرابع)"],
+
+            ["العملية", "التاريخ", "اليوم", "بداية التشغيل", "", "", "", "نهاية التشغيل", "", "", "", "زمن التشغيل", "", "", "", "كمية المياه (M3)", "", "", ""],
+
+            ["", "", "", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "Spr 1", "Spr 2", "Spr 3", "Spr 4", "F1", "F2", "F3", "F4"]
+
+        ];
+
+
+
+        history.forEach(row => {
+
+            dataArr.push([
+
+                row.id, row.date, row.day, 
+
+                ...(row.startTimes || ["-","-","-","-"]), 
+
+                ...(row.endTimes || ["-","-","-","-"]), 
+
+                ...(row.durations || ["-","-","-","-"]), 
+
+                ...(row.amounts || ["0","0","0","0"])
+
+            ]);
+
+        });
+
+
+
+        const ws = XLSX.utils.aoa_to_sheet(dataArr);
+
+        ws['!merges'] = [
+
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 18 } }, 
+
+            { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } }, 
+
+            { s: { r: 1, c: 1 }, e: { r: 2, c: 1 } }, 
+
+            { s: { r: 1, c: 2 }, e: { r: 2, c: 2 } }, 
+
+            { s: { r: 1, c: 3 }, e: { r: 1, c: 6 } }, 
+
+            { s: { r: 1, c: 7 }, e: { r: 1, c: 10 } }, 
+
+            { s: { r: 1, c: 11 }, e: { r: 1, c: 14 } }, 
+
+            { s: { r: 1, c: 15 }, e: { r: 1, c: 18 } }
+
+        ];
+
+
+
+        const range = XLSX.utils.decode_range(ws['!ref']);
+
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+
+                const cell_ref = XLSX.utils.encode_cell({ c: C, r: R });
+
+                if (!ws[cell_ref]) ws[cell_ref] = { t: 's', v: '' };
+
+                ws[cell_ref].s = { 
+
+                    alignment: { vertical: "center", horizontal: "center", wrapText: true }, 
+
+                    border: { 
+
+                        top: { style: "thin" }, bottom: { style: "thin" }, 
+
+                        left: { style: "thin" }, right: { style: "thin" } 
+
+                    } 
+
+                };
+
+                if (R <= 2) { 
+
+                    ws[cell_ref].s.fill = { fgColor: { rgb: "E0E0E0" } }; 
+
+                    ws[cell_ref].s.font = { bold: true }; 
+
+                }
+
             }
+
+        }
+
+        ws['!cols'] = Array(19).fill({ wch: 12 });
+
+
+
+        const wb = XLSX.utils.book_new();
+
+        XLSX.utils.book_append_sheet(wb, ws, "نتائج الري");
+
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+
+
+        // --- 2. معالجة الصور والـ PDF ---
+
+        if (isDarkMode) document.body.classList.remove('dark-mode');
+
+        if (typeof updateChartColors === "function") updateChartColors(false);
+
+
+
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+
+
+        const captureOptions = {
+
+            scale: 3,
+
+            useCORS: true,
+
+            backgroundColor: "#ffffff",
+
+            onclone: (clonedDoc) => {
+
+                const all = clonedDoc.querySelectorAll('*');
+
+                all.forEach(node => {
+
+                    node.style.filter = 'none';
+
+                    node.style.textShadow = 'none';
+
+                    node.style.boxShadow = 'none';
+
+                });
+
+                // إجبار اللون الأبيض وقت التصوير لضمان النقاء
+
+                const containers = clonedDoc.querySelectorAll('.history-table, .chart-container, table, .box');
+
+                containers.forEach(c => {
+
+                    c.style.setProperty('background', '#ffffff', 'important');
+
+                    c.style.setProperty('color', '#000000', 'important');
+
+                });
+
+            }
+
+        };
+
+
+
+        const chartElement = document.querySelector('.chart-container');
+
+        const chartCanvas = await html2canvas(chartElement, captureOptions);
+
+        const chartImgData = chartCanvas.toDataURL('image/png');
+
+
+
+        const tableElement = document.querySelector('.history-table') || document.querySelector('table');
+
+        const tableCanvas = await html2canvas(tableElement, captureOptions);
+
+        const tableImgData = tableCanvas.toDataURL('image/png');
+
+
+
+        // بناء ملف الـ PDF الاحترافي (A4)
+
+        const { jsPDF } = window.jspdf;
+
+        const pdf = new jsPDF('p', 'mm', 'a4');
+
+
+
+        // إضافة العناوين (متوسطة)
+
+        pdf.setFontSize(18);
+
+        pdf.text("IoT Irrigation System Report", 105, 15, { align: "center" });
+
+        pdf.setFontSize(10);
+
+        pdf.text(`Generated: ${new Date().toLocaleString()}`, 105, 22, { align: "center" });
+
+
+
+        // 1. إضافة الجدول (متوسط)
+
+        const tableProps = pdf.getImageProperties(tableImgData);
+
+        const tableW = 190;
+
+        const tableH = (tableProps.height * tableW) / tableProps.width;
+
+        const tableX = (210 - tableW) / 2;
+
+        pdf.addImage(tableImgData, 'PNG', tableX, 30, tableW, tableH);
+
+
+
+        // 2. فحص المساحة المتبقية للمنحنى (متوسط)
+
+        const chartProps = pdf.getImageProperties(chartImgData);
+
+        const imgW = 180;
+
+        const imgH = (chartProps.height * imgW) / chartProps.width;
+
+        const xPos = (210 - imgW) / 2;
+
+
+
+        if (tableH + 30 + imgH > 275) {
+
+            pdf.addPage();
+
+            pdf.setFontSize(16);
+
+            pdf.text("Irrigation Data Visualization", 105, 15, { align: "center" });
+
+            pdf.addImage(chartImgData, 'PNG', xPos, 25, imgW, imgH);
+
+        } else {
+
+            pdf.addImage(chartImgData, 'PNG', xPos, tableH + 45, imgW, imgH);
+
+        }
+
+
+
+        const pdfBlob = pdf.output('blob');
+
+
+
+        // --- 3. التجميع النهائي في ملف ZIP ---
+
+        const zip = new JSZip();
+
+        zip.file(`Detailed_Report_${dateStr}.xlsx`, excelBuffer);
+
+        zip.file(`Summary_Report_${dateStr}.pdf`, pdfBlob);
+
+        
+
+        const chartBlob = await new Promise(resolve => chartCanvas.toBlob(resolve, 'image/png'));
+
+        zip.file(`Chart_Analysis_${dateStr}.png`, chartBlob);
+
+
+
+        const zipContent = await zip.generateAsync({type:"blob"});
+
+        saveAs(zipContent, `Irrigation_Project_Data_${dateStr}.zip`);
+
+
+
+    } catch (error) {
+        console.error("خطأ أثناء التجميع:", error);
+        alert("حدث خطأ، يرجى المحاولة مرة أخرى");
+    } finally {
+        // 2. إخفاء الرسالة فوراً بعد ما الملف يتحمل (سواء نجح أو فشل)
+        if (warningBox) {
+            warningBox.style.display = 'none';
+        }
+        if (isDarkMode) {
+            document.body.classList.add('dark-mode');
+        }
+
+        // 5. تحديث ألوان الرسوم البيانية إذا كانت موجودة
+        if (typeof updateChartColors === "function") {
+            updateChartColors(isDarkMode);
         }
     }
-    ws['!cols'] = Array(19).fill({ wch: 12 });
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "نتائج الري");
-    
-    // توليد الـ Buffer الخاص بالإكسيل بصيغة Array
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-
-    // --- 2. التقاط الصور للـ PDF (جودة عالية) ---
-    // لقطة للمنحنى
-    const chartElement = document.querySelector('.chart-container');
-    const chartCanvas = await html2canvas(chartElement, { scale: 3, useCORS: true, backgroundColor: "#ffffff" });
-    const chartImgData = chartCanvas.toDataURL('image/png');
-
-    // لقطة للجدول (تأكد أن الـ ID أو الـ Class صحيح في الـ HTML)
-    const tableElement = document.querySelector('.history-table') || document.querySelector('table');
-    const tableCanvas = await html2canvas(tableElement, { scale: 3, useCORS: true, backgroundColor: "#ffffff" });
-    const tableImgData = tableCanvas.toDataURL('image/png');
-
-    // --- 3. بناء ملف الـ PDF الاحترافي ---
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-
-    // الهيدر
-    pdf.setFontSize(18);
-    pdf.setTextColor(40);
-    pdf.text("IoT Irrigation System", 105, 15, { align: "center" });
-    pdf.setFontSize(10);
-    pdf.text(`Generated: ${new Date().toLocaleString()}`, 105, 22, { align: "center" });
-
-    // وضع صورة الجدول
-    const tableProps = pdf.getImageProperties(tableImgData);
-    const tableHeight = (tableProps.height * 190) / tableProps.width;
-    pdf.addImage(tableImgData, 'PNG', 10, 30, 190, tableHeight);
-
-    // وضع صورة المنحنى أسفل الجدول
-    const chartProps = pdf.getImageProperties(chartImgData);
-    const chartHeight = (chartProps.height * 190) / chartProps.width;
-    // ترك مسافة 15 ملم تحت الجدول قبل المنحنى
-    pdf.addImage(chartImgData, 'PNG', 10, tableHeight + 45, 190, chartHeight);
-
-    const pdfBlob = pdf.output('blob');
-
-    // --- 4. التجميع النهائي في ملف ZIP ---
-    const zip = new JSZip();
-    zip.file(`Detailed_Report_${dateStr}.xlsx`, excelBuffer);
-    zip.file(`Summary_Report_${dateStr}.pdf`, pdfBlob);
-    
-    // إضافة الصورة منفردة أيضاً
-    const chartBlob = await new Promise(resolve => chartCanvas.toBlob(resolve, 'image/png'));
-    zip.file(`Chart_Analysis_${dateStr}.png`, chartBlob);
-
-    zip.generateAsync({type:"blob"}).then(content => {
-        saveAs(content, `Irrigation_Project_Data_${dateStr}.zip`);
-    });
 };
         window.clearAllHistory = function() {
             if (confirm("يرجى العلم أنه سيتم حذف المنحنى مع السجل")) { 
@@ -1192,5 +1415,6 @@ setTimeout(() => {
             }
         });
     </script>
+    
 </body>
 </html>
