@@ -275,13 +275,12 @@
         </div>
     </div>
 
-    <!-- FIX 1: الـ import لازم يكون أول حاجة في الـ module script بدون أي كود قبله -->
+    <!-- الـ import لازم يكون أول حاجة في الـ module script بدون أي كود قبله -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, set, remove, push, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // FIX 2: تعريف المتغيرات بعد الـ imports مش قبلها
         let lastFirebaseTime = 0;
         let lastActiveFirebaseTime = 0;
 
@@ -316,19 +315,16 @@
             accumulatedAmounts: [0,0,0,0]
         };
 
-        // --- متغيرات التكامل العددي الدقيق (مطلب 4) ---
-        // بدل avgFlow * totalTime، بنحسب مجموع (flow_i × Δt_i) لكل فترة
-        let integrationLastTs = [null, null, null, null];   // توقيت آخر قراءة لكل رشاش (ms)
-        let integrationLastFlow = [0, 0, 0, 0];             // آخر قيمة تصرف لكل رشاش
+        // --- متغيرات التكامل العددي الدقيق ---
+        let integrationLastTs = [null, null, null, null];
+        let integrationLastFlow = [0, 0, 0, 0];
 
-        // --- متغيرات لمتابعة آخر قيم للمنحنى (مطلب 1) ---
-        let lastChartFlows = null;   // null = لم يُعرض أي شيء بعد
+        // --- متغيرات لمتابعة آخر قيم للمنحنى ---
+        let lastChartFlows = null;
 
-        // نشارك المتغيرات مع السكريبتات الأخرى
         window._sessionData = sessionData;
         window._integrationLastTs = integrationLastTs;
         window._integrationLastFlow = integrationLastFlow;
-
 
         // ===================== وضع الليل =====================
         const themeToggle = document.getElementById('themeToggle');
@@ -458,18 +454,15 @@
             onValue(ref(db, 'Sprinklers'), (snap) => {
                 const d = snap.val() || {};
 
-                // --- مطلب 5: الوقت يجي من Firebase مش من الجهاز ---
-                // كل رشاش عنده timestamp خاص بيه، نأخذه ونحوله لـ ms
                 const sprinklerKeys = ['Sprinkler1','Sprinkler2','Sprinkler3','Sprinkler4'];
                 const flows = sprinklerKeys.map(k => parseFloat(d[k]?.Flow || 0));
                 const timestamps = sprinklerKeys.map(k => {
                     let ts = d[k]?.timestamp;
                     if (!ts) return null;
-                    if (ts < 10000000000) ts *= 1000; // تحويل ثواني → ms
+                    if (ts < 10000000000) ts *= 1000;
                     return ts;
                 });
 
-                // نأخذ أحدث timestamp متاح من Firebase كوقت مرجعي عام
                 const _fbFallback = lastFirebaseTime || (Date.now()+(window._serverOffset||0));
                 const firebaseNow = timestamps.reduce((best, ts) => (ts && ts > best) ? ts : best, _fbFallback);
                 lastFirebaseTime = firebaseNow;
@@ -478,11 +471,9 @@
                 const anyOn = flows.some(v => v > 0.1);
                 if (anyOn) lastActiveFirebaseTime = firebaseNow;
 
-                // --- مطلب 1: تحديث المنحنى فقط لو التصرف اتغير ---
                 const flowChanged = !lastChartFlows ||
                     flows.some((v, i) => Math.abs(v - lastChartFlows[i]) > 0.001);
 
-                // الحالة القديمة للري قبل التعديل
                 const isWatering_prev = isWatering;
                 const statusEl = document.getElementById('mainStatus');
 
@@ -496,7 +487,6 @@
                             const ts = timestamps[i] || firebaseNow;
                             sessionData.rawStartTimes[i] = ts;
                             sessionData.startTimes[i] = new Date(ts).toLocaleTimeString('ar-EG');
-                            // نبدأ التكامل من هنا
                             integrationLastTs[i] = ts;
                             integrationLastFlow[i] = v;
                         }
@@ -507,21 +497,18 @@
                     localStorage.setItem('isWatering','false');
                     if (statusEl) statusEl.innerText = "🔴 النظام متوقف حالياً";
 
-                    // --- مطلب 5: وقت التوقف = آخر timestamp شفنا فيه تصرف حقيقي ---
                     const stopTime = lastActiveFirebaseTime > 0 ? lastActiveFirebaseTime : firebaseNow;
                     localStorage.setItem('lastStoppedTime', String(stopTime));
 
                     flows.forEach((_, i) => {
                         if (sessionData.rawStartTimes[i] && !sessionData.rawEndTimes[i]) {
                             const ts = timestamps[i] || firebaseNow;
-                            // نضيف آخر فترة للتكامل (من آخر قراءة للآن بتصرف صفر)
                             if (integrationLastTs[i] !== null) {
                                 const deltaHrs = (ts - integrationLastTs[i]) / 3600000;
                                 sessionData.accumulatedAmounts[i] += integrationLastFlow[i] * deltaHrs;
                             }
                             sessionData.rawEndTimes[i] = ts;
                             sessionData.endTimes[i] = new Date(ts).toLocaleTimeString('ar-EG');
-                            // نصفّر التكامل
                             integrationLastTs[i] = null;
                             integrationLastFlow[i] = 0;
                         }
@@ -548,10 +535,8 @@
                             const ts = timestamps[i] || firebaseNow;
                             if (integrationLastTs[i] !== null && ts > integrationLastTs[i]) {
                                 const deltaHrs = (ts - integrationLastTs[i]) / 3600000;
-                                // نضيف المساحة (التصرف السابق × الفترة الزمنية)
                                 sessionData.accumulatedAmounts[i] += integrationLastFlow[i] * deltaHrs;
                             } else if (integrationLastTs[i] === null) {
-                                // أول قراءة — نبدأ التتبع
                                 integrationLastTs[i] = ts;
                             }
                             integrationLastTs[i] = ts;
@@ -560,11 +545,9 @@
                     });
                 }
 
-                // ===================== تحديث المنحنى (مطلب 1 + 2 + 3) =====================
-                // نأخذ الوقت من Firebase فقط — أحدث timestamp حقيقي من البيانات
+                // ===================== تحديث المنحنى =====================
                 const fbTimestamp = timestamps.reduce((best, ts) => (ts && ts > best) ? ts : best, 0);
                 if (myChart && flowChanged && fbTimestamp > 0) {
-                    // الوقت من Firebase بالتوقيت المحلي HH:MM:SS (مثل شيت Excel)
                     const timeStr = new Date(fbTimestamp).toLocaleTimeString('en-US', {
                         hour: '2-digit', minute: '2-digit', second: '2-digit',
                         hour12: true
@@ -573,7 +556,6 @@
                     if (anyOn && !isWatering_prev) { myChart.data.labels.push(timeStr+' ▶'); myChart.data.datasets.forEach(ds=>ds.data.push(0)); }
 
                     if (anyOn) {
-                        // الري شغال — ضيف القيم الحالية
                         myChart.data.labels.push(timeStr);
                         flows.forEach((v, i) => myChart.data.datasets[i].data.push(v));
                     } else if (!anyOn && isWatering_prev) { myChart.data.labels.push(timeStr+' ⏹'); myChart.data.datasets.forEach(ds=>ds.data.push(0)); }
@@ -585,16 +567,23 @@
                     }
 
                     myChart.update('none');
-                    localStorage.setItem('chart_labels', JSON.stringify(myChart.data.labels));
-                    myChart.data.datasets.forEach((ds, i) => localStorage.setItem(`chart_f${i+1}`, JSON.stringify(ds.data)));
 
-                    // تحديث lastChartFlows بعد الرسم
+                    // ========= حفظ بيانات المنحنى في Firebase بدل localStorage =========
+                    const chartDataToSave = {
+                        labels: myChart.data.labels,
+                        f1: myChart.data.datasets[0].data,
+                        f2: myChart.data.datasets[1].data,
+                        f3: myChart.data.datasets[2].data,
+                        f4: myChart.data.datasets[3].data,
+                        isWatering: isWatering
+                    };
+                    set(ref(db, 'chart_data'), chartDataToSave).catch(err => console.error("خطأ حفظ المنحنى:", err));
+
                     lastChartFlows = [...flows];
                 }
 
                 updateErrorLogs(flows, anyOn);
 
-                // تحديث أرقام F1-F4 في أعلى الصفحة
                 flows.forEach((v, i) => {
                     const el = document.getElementById('v' + (i + 1));
                     if (el) el.innerText = v.toFixed(2);
@@ -608,11 +597,9 @@
             console.log("GPS DATA:", coords);
             const lat = parseFloat(coords.Lat) || 0;
             const lng = parseFloat(coords.Lng) || 0;
-            // مطلب 5: الوقت من Firebase — نحوله من ثواني لـ ms لو محتاج
             let time = coords.timestamp || (Date.now()+(window._serverOffset||0));
             if (time < 10000000000) time *= 1000;
 
-            // FIX 3: إزالة الكود المكسور بالـ mapUrl الزيادة جوه الـ onclick
             const mapIcon = document.getElementById('mapLink');
             if (mapIcon) {
                 mapIcon.onclick = () => {
@@ -633,14 +620,12 @@
             const gpsTimeEl = document.getElementById('gpsTime');
             if (gpsTimeEl) gpsTimeEl.innerText = "آخر تحديث: " + new Date(time).toLocaleString('ar-EG');
 
-            // تحديث الأرصاد الجوية بناءً على إحداثيات GPS من Firebase
             if (lat !== 0 && lng !== 0) fetchWeather(lat, lng);
         });
 
         // ===================== الأرصاد الجوية (OpenWeather) =====================
         let _lastWeatherLat = null, _lastWeatherLng = null;
         async function fetchWeather(lat, lng) {
-            // تجنب طلبات متكررة لنفس الموقع (فرق أقل من 0.01 درجة)
             if (_lastWeatherLat !== null &&
                 Math.abs(lat - _lastWeatherLat) < 0.01 &&
                 Math.abs(lng - _lastWeatherLng) < 0.01) return;
@@ -656,7 +641,6 @@
                 const res = await fetch(url);
                 if (res.status === 401) {
                     if (locEl) locEl.innerText = '⏳ مفتاح API لم يُفعَّل بعد — انتظر 2-4 ساعات من إنشائه';
-                    // نعيد ضبط الإحداثيات عشان يحاول تاني لما GPS يتحدث
                     _lastWeatherLat = null; _lastWeatherLng = null;
                     return;
                 }
@@ -667,20 +651,16 @@
                 const humidity = data.main?.humidity              ?? '--';
                 const wind     = data.wind?.speed?.toFixed(1)     ?? '--';
 
-                // معدل الأمطار — ياخد من rain.1h أو rain.3h لو متوفر
                 let rainVal = 0;
                 if (data.rain) {
                     rainVal = data.rain['1h'] ?? data.rain['3h'] ?? 0;
                 }
-                // لو مفيش مطر نحسب تقريب مبسط للبخر نتح بالـ Hargreaves
                 let rainText;
                 if (rainVal > 0) {
                     rainText = `${rainVal.toFixed(1)} mm/hr`;
                 } else {
-                    // تقدير مبسط للبخر نتح اليومي (Hargreaves): ET0 = 0.0023 × Ra × (T+17.8) × √(ΔT)
-                    // نستخدم T_max ≈ T+5 و T_min ≈ T-5 كتقريب
                     const T = parseFloat(data.main.temp) || 20;
-                    const Ra = 25; // معدل إشعاع عالمي تقريبي MJ/m²/day
+                    const Ra = 25;
                     const et0 = (0.0023 * Ra * (T + 17.8) * Math.sqrt(10)).toFixed(1);
                     rainText = `ET₀ ≈ ${et0} mm/day`;
                 }
@@ -710,8 +690,6 @@
 
         // ===================== الدوال المساعدة =====================
 
-        // calculateFinalForSprinkler: اتحولت لتكامل عددي مباشر جوه startTracking
-
         function updateErrorLogs(f, isActive) {
             const log = document.getElementById('errorLog');
             if (!log) return;
@@ -727,8 +705,8 @@
             log.innerHTML=html;
         }
 
-        function saveSession(finishTime) {
-            const history = JSON.parse(localStorage.getItem('irr_history') || "[]");
+        // ===================== حفظ الجلسة في Firebase =====================
+        async function saveSession(finishTime) {
             const finalAmounts = sessionData.accumulatedAmounts.map(a => parseFloat(a).toFixed(4));
             const durations = sessionData.rawStartTimes.map((start, i) => {
                 if (start && sessionData.rawEndTimes[i]) {
@@ -739,71 +717,91 @@
                 return "-";
             });
 
-            history.push({
-                id: history.length + 1,
+            // قراءة السجل الحالي من Firebase لتحديد رقم العملية
+            let nextId = 1;
+            try {
+                const snap = await get(ref(db, 'irr_history'));
+                if (snap.exists()) {
+                    const existingData = snap.val();
+                    const keys = Object.keys(existingData);
+                    nextId = keys.length + 1;
+                }
+            } catch(e) {
+                console.error("خطأ في قراءة السجل:", e);
+            }
+
+            const newRecord = {
+                id: nextId,
                 date: new Date(finishTime).toLocaleDateString('ar-EG'),
                 day: new Intl.DateTimeFormat('ar-EG', {weekday:'long'}).format(new Date(finishTime)),
                 amounts: finalAmounts,
-                startTimes: [...sessionData.startTimes],
-                endTimes: [...sessionData.endTimes],
-                durations: durations
-            });
-            localStorage.setItem('irr_history', JSON.stringify(history));
+                startTimes: [...sessionData.startTimes].map(t => t || "-"),
+                endTimes: [...sessionData.endTimes].map(t => t || "-"),
+                durations: durations,
+                timestamp: finishTime
+            };
 
-            for(let i=0;i<4;i++){sessionData.rawStartTimes[i]=null;sessionData.rawEndTimes[i]=null;sessionData.startTimes[i]=null;sessionData.endTimes[i]=null;sessionData.accumulatedAmounts[i]=0;integrationLastTs[i]=null;integrationLastFlow[i]=0;}
+            // حفظ في Firebase باستخدام push لإنشاء key فريد
+            try {
+                await push(ref(db, 'irr_history'), newRecord);
+                console.log("تم حفظ الجلسة في Firebase");
+            } catch(e) {
+                console.error("خطأ في حفظ الجلسة:", e);
+            }
 
-            window.loadHistory();
+            // إعادة تصفير بيانات الجلسة
+            for(let i=0;i<4;i++){
+                sessionData.rawStartTimes[i]=null;
+                sessionData.rawEndTimes[i]=null;
+                sessionData.startTimes[i]=null;
+                sessionData.endTimes[i]=null;
+                sessionData.accumulatedAmounts[i]=0;
+                integrationLastTs[i]=null;
+                integrationLastFlow[i]=0;
+            }
         }
 
-        // ===================== السجل =====================
+        // ===================== السجل — يُحمَّل من Firebase مباشرةً =====================
         window.loadHistory = function() {
-            const tbody = document.querySelector('#historyTable tbody');
-            if (!tbody) return;
-            tbody.innerHTML = "";
-            const history = JSON.parse(localStorage.getItem('irr_history') || "[]");
-            history.slice().forEach(row => {
-                const tr = tbody.insertRow();
-                tr.innerHTML = `<td>${row.id}</td><td>${row.date}</td><td>${row.day}</td>
-                    <td><div class="grid-cell">
-                        <div class="sub-val" style="color:#3498db;font-weight:bold">F1:${row.amounts[0]}</div>
-                        <div class="sub-val" style="color:#e74c3c;font-weight:bold">F2:${row.amounts[1]}</div>
-                        <div class="sub-val" style="color:#f1c40f;font-weight:bold">F3:${row.amounts[2]}</div>
-                        <div class="sub-val" style="color:#2ecc71;font-weight:bold">F4:${row.amounts[3]}</div>
-                    </div></td>`;
+            onValue(ref(db, 'irr_history'), (snap) => {
+                const tbody = document.querySelector('#historyTable tbody');
+                if (!tbody) return;
+                tbody.innerHTML = "";
+
+                if (!snap.exists()) return;
+
+                const data = snap.val();
+                // تحويل الـ object لـ array ورتبه حسب الـ id
+                const history = Object.values(data).sort((a, b) => (a.id || 0) - (b.id || 0));
+
+                history.forEach(row => {
+                    const tr = tbody.insertRow();
+                    tr.innerHTML = `<td>${row.id}</td><td>${row.date}</td><td>${row.day}</td>
+                        <td><div class="grid-cell">
+                            <div class="sub-val" style="color:#3498db;font-weight:bold">F1:${row.amounts[0]}</div>
+                            <div class="sub-val" style="color:#e74c3c;font-weight:bold">F2:${row.amounts[1]}</div>
+                            <div class="sub-val" style="color:#f1c40f;font-weight:bold">F3:${row.amounts[2]}</div>
+                            <div class="sub-val" style="color:#2ecc71;font-weight:bold">F4:${row.amounts[3]}</div>
+                        </div></td>`;
+                });
             });
         };
 
-        // ===================== المنحنى =====================
-        function initChart() {
+        // ===================== المنحنى — يُحمَّل من Firebase =====================
+        window.initChart = function initChart() {
             const ctx = document.getElementById('myChart');
             if (myChart) myChart.destroy();
 
-            let savedLabels = JSON.parse(localStorage.getItem('chart_labels') || "[]");
-            let datasetsData = [];
-            for (let i = 1; i <= 4; i++) {
-                datasetsData.push(JSON.parse(localStorage.getItem(`chart_f${i}`) || "[]"));
-            }
-
-            if (localStorage.getItem('isWatering')!=='true' && datasetsData.some(data => data.length > 0 && data[data.length - 1] > 0)) {
-                if (lastFirebaseTime > 0) {
-                    const nowStr = new Date(lastFirebaseTime).toLocaleTimeString('en-US', {
-                        hour: '2-digit', minute: '2-digit', second: '2-digit',
-                        hour12: true
-                    });
-                    savedLabels.push(nowStr + " (توقف)");
-                    datasetsData.forEach(data => data.push(0));
-                }
-            }
-
+            // نبدأ بمنحنى فارغ أولاً ثم نحدّثه لما تيجي البيانات من Firebase
             myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: savedLabels,
+                    labels: [],
                     datasets: [
-                        { label: 'F1', borderColor: '#3498db', data: datasetsData[0], tension: 0.4, fill: false, pointRadius: 0 },
-                        { label: 'F2', borderColor: '#e74c3c', data: datasetsData[1], tension: 0.4, fill: false, pointRadius: 0 },
-                        { label: 'F3', borderColor: '#f1c40f', data: datasetsData[2], tension: 0.4, fill: false, pointRadius: 0 },
-                        { label: 'F4', borderColor: '#2ecc71', data: datasetsData[3], tension: 0.4, fill: false, pointRadius: 0 }
+                        { label: 'F1', borderColor: '#3498db', data: [], tension: 0.4, fill: false, pointRadius: 0 },
+                        { label: 'F2', borderColor: '#e74c3c', data: [], tension: 0.4, fill: false, pointRadius: 0 },
+                        { label: 'F3', borderColor: '#f1c40f', data: [], tension: 0.4, fill: false, pointRadius: 0 },
+                        { label: 'F4', borderColor: '#2ecc71', data: [], tension: 0.4, fill: false, pointRadius: 0 }
                     ]
                 },
                 options: {
@@ -818,9 +816,37 @@
                 }
             });
 
-            localStorage.setItem('chart_labels', JSON.stringify(savedLabels));
-            datasetsData.forEach((data, i) => localStorage.setItem(`chart_f${i+1}`, JSON.stringify(data)));
-        }
+            // قراءة بيانات المنحنى المحفوظة من Firebase (مرة واحدة فقط عند البدء)
+            get(ref(db, 'chart_data')).then(snap => {
+                if (!snap.exists()) return;
+                const cd = snap.val();
+
+                let savedLabels = cd.labels || [];
+                let datasetsData = [cd.f1 || [], cd.f2 || [], cd.f3 || [], cd.f4 || []];
+                const wasWatering = cd.isWatering === true;
+
+                // لو كان الري متوقف وآخر قيمة مش صفر، نضيف نقطة توقف
+                if (!wasWatering && datasetsData.some(data => data.length > 0 && data[data.length - 1] > 0)) {
+                    if (lastFirebaseTime > 0) {
+                        const nowStr = new Date(lastFirebaseTime).toLocaleTimeString('en-US', {
+                            hour: '2-digit', minute: '2-digit', second: '2-digit',
+                            hour12: true
+                        });
+                        savedLabels.push(nowStr + " (توقف)");
+                        datasetsData.forEach(data => data.push(0));
+                    }
+                }
+
+                if (myChart) {
+                    myChart.data.labels = savedLabels;
+                    myChart.data.datasets.forEach((ds, i) => { ds.data = datasetsData[i]; });
+                    myChart.update('none');
+                }
+            }).catch(err => console.error("خطأ تحميل بيانات المنحنى:", err));
+        };
+
+        // اجعل initChart متاح عالمياً
+        window.initChart = window.initChart;
 
         // ===================== تصدير Excel + PDF + ZIP =====================
         window.exportToExcel = async function() {
@@ -828,7 +854,17 @@
             const warningBox = document.getElementById('nightModeWarning');
             if (warningBox) warningBox.style.display = 'block';
 
-            const history = JSON.parse(localStorage.getItem('irr_history') || "[]");
+            // قراءة السجل من Firebase
+            let history = [];
+            try {
+                const snap = await get(ref(db, 'irr_history'));
+                if (snap.exists()) {
+                    history = Object.values(snap.val()).sort((a, b) => (a.id || 0) - (b.id || 0));
+                }
+            } catch(e) {
+                console.error("خطأ قراءة السجل:", e);
+            }
+
             if (history.length === 0) {
                 alert("السجل فارغ");
                 if (warningBox) warningBox.style.display = 'none';
@@ -952,11 +988,26 @@
             }
         };
 
-        window.clearAllHistory = function() {
+        // ===================== حذف السجل والمنحنى من Firebase =====================
+        window.clearAllHistory = async function() {
             if (confirm("يرجى العلم أنه سيتم حذف المنحنى مع السجل")) {
+                try {
+                    // حذف سجل الري من Firebase
+                    await remove(ref(db, 'irr_history'));
+                    // حذف بيانات المنحنى من Firebase
+                    await remove(ref(db, 'chart_data'));
+                    console.log("تم حذف السجل والمنحنى من Firebase");
+                } catch(e) {
+                    console.error("خطأ في الحذف من Firebase:", e);
+                    alert("حدث خطأ أثناء الحذف، يرجى المحاولة مرة أخرى");
+                    return;
+                }
+
+                // تنظيف localStorage من أي بيانات قديمة
                 ['irr_history','chart_labels','chart_f1','chart_f2','chart_f3','chart_f4','lastStoppedTime','savedChartData'].forEach(k => localStorage.removeItem(k));
+
+                // إعادة رسم منحنى فارغ
                 initChart();
-                window.loadHistory();
             }
         };
 
@@ -998,7 +1049,6 @@
             if(!layer||!box)return;
             const cfg=getCfg(flow);
             if(Math.abs(dropCounts[idx]-cfg.n)<3){
-                // just update existing drops
                 Array.from(layer.children).forEach(d=>{d.style.background=cfg.color;d.style.animationDuration=cfg.dur+'s';d.style.height=cfg.h+'px';d.style.width=cfg.w+'px';});
                 return;
             }
