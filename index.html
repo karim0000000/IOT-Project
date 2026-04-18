@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>نظام IOT</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>  
@@ -133,6 +134,134 @@
             100%{transform:translateY(var(--box-h,70px));opacity:0;}
         }
         #login-page, #welcome-page, #dashboard-page { display: none; }
+    
+        /* ═══════════════════════════════════════════════════════════
+           RESPONSIVE — Tablet & Mobile
+           ═══════════════════════════════════════════════════════════ */
+
+        /* ── Tablet (≤ 900px) ── */
+        @media (max-width: 900px) {
+            .main-layout { flex-direction: column !important; gap: 12px; }
+            .chart-box   { min-width: unset !important; width: 100%; order: 2; padding-bottom: 0; }
+            .sidebar     { min-width: unset !important; width: 100%; order: 1; }
+            .chart-container { height: 350px !important; }
+            #dashboard-page  { padding: 10px; padding-bottom: 20px; }
+        }
+
+        /* ── Mobile (≤ 600px) ── */
+        @media (max-width: 600px) {
+
+            /* --- الصفحات العامة --- */
+            body { font-size: 14px; }
+
+            /* --- صفحة الدخول --- */
+            #login-page { padding: 20px !important; }
+            .login-card {
+                width: 90% !important;
+                padding: 24px 18px !important;
+                border-radius: 14px;
+            }
+            .login-card h2  { font-size: 1.3em; }
+            .login-card input { font-size: 1em; padding: 11px 10px; }
+            .btn-login { font-size: 1em; padding: 13px; }
+
+            /* --- صفحة الترحيب --- */
+            #welcome-page > div { width: 88% !important; padding: 28px 18px !important; }
+            #welcome-page h1 { font-size: 1.3em; }
+            #welcome-page button { font-size: 1.1em; padding: 13px 30px !important; }
+            .credits-section { padding: 8px 10px; }
+            .credits-section h1 { font-size: 1em; }
+            .credits-section h2 p { font-size: 0.78em; }
+
+            /* --- شريط التنقل --- */
+            #menu-container { top: 4px; left: 4px; }
+            #back-arrow { top: 52px; left: 4px; font-size: 0.82em; padding: 4px 8px; }
+
+            /* --- داشبورد عام --- */
+            #dashboard-page { padding: 8px 8px 30px; }
+
+            /* --- صناديق الرشاشات (الأعلى) --- */
+            #dashboard-page > div:first-child {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+                margin-bottom: 10px !important;
+            }
+            #sbox-1, #sbox-2, #sbox-3, #sbox-4 {
+                min-height: 48px !important;
+                font-size: 0.82em;
+                padding: 10px 8px !important;
+            }
+
+            /* --- اللياوت الرئيسي --- */
+            .main-layout { gap: 8px; }
+
+            /* --- صندوق الشارت --- */
+            .chart-container { height: 240px !important; }
+            .chart-box > .box:first-child { padding: 10px 6px; }
+
+            /* --- صندوق الخريطة --- */
+            .chart-box .box[style*="height: 350px"] {
+                height: auto !important;
+                padding: 8px !important;
+            }
+            #map-canvas { height: 220px !important; }
+
+            /* --- الصناديق العامة --- */
+            .box {
+                border-radius: 10px;
+                padding: 10px 10px;
+                margin-bottom: 10px;
+            }
+
+            /* --- الجدول --- */
+            .scroll-area { height: 260px; }
+            table { font-size: 0.72em; }
+            th, td { padding: 5px 3px; }
+            .grid-cell { grid-template-columns: 1fr 1fr; gap: 1px; }
+            .sub-val { font-size: 0.68em; padding: 2px; }
+
+            /* --- أزرار Excel/Delete --- */
+            .btn-modern {
+                font-size: 0.82em !important;
+                padding: 10px 6px !important;
+                border-radius: 8px !important;
+                gap: 5px !important;
+            }
+            [style*="display: flex; gap: 10px; width: 100%; margin-top: 30px"] {
+                gap: 6px !important;
+                margin-top: 14px !important;
+            }
+
+            /* --- سجل الأعطال --- */
+            .box[style*="height: 250px"] { height: auto !important; }
+            #errorLog { max-height: 120px; font-size: 0.8em; }
+            .error-msg { font-size: 0.85em !important; }
+
+            /* --- صندوق الأرصاد --- */
+            #weather-box h4 { font-size: 0.95em; }
+            #weather-location { font-size: 0.78em !important; }
+            #weather-box > div[style*="grid-template-columns:1fr 1fr"] {
+                gap: 6px !important;
+            }
+            #weather-box > div > div { padding: 8px 6px !important; border-radius: 8px; }
+            #w-temp, #w-humidity, #w-wind, #w-rain { font-size: 1em !important; }
+
+            /* --- العنوان GPS --- */
+            #map-canvas + h4, h4[style*="text-align: center"] { font-size: 0.9em; }
+
+            /* --- warning bar --- */
+            #nightModeWarning span { font-size: 1em !important; }
+        }
+
+        /* ── Small Mobile (≤ 380px) ── */
+        @media (max-width: 380px) {
+            body { font-size: 13px; }
+            .chart-container { height: 200px !important; }
+            #map-canvas { height: 180px !important; }
+            table { font-size: 0.65em; }
+            .btn-modern { font-size: 0.75em !important; }
+            .login-card { width: 95% !important; }
+        }
     </style>
 
     <div id="login-page" style="height: 100vh; align-items: center; justify-content: center; background: linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('https://scontent.fcai11-1.fna.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=25d718&_nc_ohc=l6l6l-carw0Q7kNvwEY-uTL&_nc_oc=Ado13DQaoI_TgcQE14jq91ZdW12rXaGbJpGD69ia6vUvQ1o7XCSZSzNGZLjn1JbUqq0BOUX_amO857O03c8AVAnY&_nc_zt=23&_nc_ht=scontent.fcai11-1.fna&_nc_gid=oPpDmxIbNGGwC5YKi-rcSg&_nc_ss=7a389&oh=00_Af2yh1UrKOozUhJMRiJVMwSceTU0a1Xf-v66ifJqa_Ckvw&oe=69D89403') no-repeat center center fixed; background-size: cover;">
