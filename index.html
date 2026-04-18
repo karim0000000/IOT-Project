@@ -485,71 +485,12 @@ input[type="password"]::-ms-reveal,
         // --- متغيرات لمتابعة آخر قيم للمنحنى ---
         let lastChartFlows = null;
 
-        // --- منع التسجيل المتكرر ---
-        let isSavingSession = false;
-
         window._sessionData = sessionData;
         window._integrationLastTs = integrationLastTs;
         window._integrationLastFlow = integrationLastFlow;
 
-        // ===================== استعادة الجلسة الجارية من Firebase =====================
-        async function restoreActiveSession() {
-            try {
-                const snap = await get(ref(db, 'current_session'));
-                if (!snap.exists()) return;
-                const saved = snap.val();
-                if (!saved.active) return;
-
-                // استعادة بيانات الجلسة المحفوظة
-                sessionData.startTimes = saved.startTimes || [null,null,null,null];
-                sessionData.endTimes = saved.endTimes || [null,null,null,null];
-                sessionData.rawStartTimes = saved.rawStartTimes || [null,null,null,null];
-                sessionData.rawEndTimes = saved.rawEndTimes || [null,null,null,null];
-                sessionData.accumulatedAmounts = saved.accumulatedAmounts || [0,0,0,0];
-                integrationLastTs = saved.integrationLastTs || [null,null,null,null];
-                integrationLastFlow = saved.integrationLastFlow || [0,0,0,0];
-                console.log('تم استعادة الجلسة الجارية من Firebase');
-
-                // تحقق من الحالة الراهنة للرشاشات
-                const spSnap = await get(ref(db, 'Sprinklers'));
-                const spData = spSnap.val() || {};
-                const spKeys = ['Sprinkler1','Sprinkler2','Sprinkler3','Sprinkler4'];
-                const currentFlows = spKeys.map(k => parseFloat(spData[k]?.Flow || 0));
-                const stillWatering = currentFlows.some(v => v > 0.1);
-
-                if (stillWatering) {
-                    // الري لا يزال جارياً
-                    isWatering = true;
-                    const statusEl = document.getElementById('mainStatus');
-                    if (statusEl) statusEl.innerText = '🟢 النظام يعمل الآن';
-                } else {
-                    // الري انتهى بينما كنا غير متصلين - سجّل الجلسة الآن
-                    console.log('الري انتهى أثناء عدم الاتصال - جاري تسجيل الجلسة...');
-                    isWatering = false;
-                    const statusEl = document.getElementById('mainStatus');
-                    if (statusEl) statusEl.innerText = '🔴 النظام متوقف حالياً';
-
-                    // أكمل بيانات نهاية الجلسة للرشاشات التي لم تُسجَّل نهايتها
-                    const finishTime = saved.lastUpdate || Date.now();
-                    spKeys.forEach((_, i) => {
-                        if (sessionData.rawStartTimes[i] && !sessionData.rawEndTimes[i]) {
-                            // استخدم آخر وقت محفوظ كوقت انتهاء
-                            if (integrationLastTs[i] !== null) {
-                                const deltaHrs = (finishTime - integrationLastTs[i]) / 3600000;
-                                sessionData.accumulatedAmounts[i] += integrationLastFlow[i] * deltaHrs;
-                            }
-                            sessionData.rawEndTimes[i] = finishTime;
-                            sessionData.endTimes[i] = new Date(finishTime).toLocaleTimeString('ar-EG');
-                            integrationLastTs[i] = null;
-                            integrationLastFlow[i] = 0;
-                        }
-                    });
-                    await saveSession(finishTime);
-                }
-            } catch(e) {
-                console.error('خطأ في استعادة الجلسة:', e);
-            }
-        }
+        // --- منع التسجيل المتكرر ---
+        let isSavingSession = false;
 
         // ===================== حفظ الجلسة الجارية في Firebase (أثناء الري) =====================
         async function saveActiveSession() {
@@ -574,10 +515,182 @@ input[type="password"]::-ms-reveal,
         async function clearActiveSession() {
             try {
                 await set(ref(db, 'current_session'), { active: false });
+            } catch(e) { /* تجاهل */ }
+        }
+
+        // ===================== تسجيل جلسة مُعادة بناؤها من chart_data =====================
+        async function recordMissedSession(chartData, finishTime) {
+            // إعادة بناء الكميات التقريبية من بيانات المنحنى المحفوظة
+            const labels = chartData.labels || [];
+            const datasets = [chartData.f1||[], chartData.f2||[], chartData.f3||[], chartData.f4||[]];
+            const amounts = [0,0,0,0];
+            let minTs = null, maxTs = null;
+
+            for (let li = 1; li < labels.length; li++) {
+                const lbl = labels[li];
+                // استخراج التوقيت من التسمية
+                const d = new Date(labels[li - 1].replace(' ▶','').replace(' ⏹','').trim());
+                const d2 = new Date(lbl.replace(' ▶','').replace(' ⏹','').trim());
+                if (!isNaN(d.getTime()) && !isNaN(d2.getTime())) {
+                    const dt = (d2 - d) / 3600000;
+                    if (dt > 0 && dt < 1) {
+                        datasets.forEach((ds, i) => {
+                            const v = ds[li] || 0;
+                            if (v > 0.1) amounts[i] += v * dt;
+                        });
+                        const ts = d.getTime();
+                        const ts2 = d2.getTime();
+                        if (minTs === null || ts < minTs) minTs = ts;
+                        if (maxTs === null || ts2 > maxTs) maxTs = ts2;
+                    }
+                }
+            }
+
+            // إذا لم نستطع استخراج توقيتات نستخدم finishTime فقط
+            const sessionFinish = maxTs || finishTime;
+            const sessionStart = minTs || (sessionFinish - 1800000); // افتراضي 30 دقيقة قبل
+
+            const startDate = new Date(sessionStart);
+            const endDate = new Date(sessionFinish);
+            const diffSec = Math.floor((sessionFinish - sessionStart) / 1000);
+            const h = Math.floor(diffSec/3600), m = Math.floor((diffSec%3600)/60), s = diffSec%60;
+            const durationStr = h+"س و"+m+"د و"+s+"ث";
+
+            let nextId = 1;
+            try {
+                const snap = await get(ref(db, 'irr_history'));
+                if (snap.exists()) nextId = Object.keys(snap.val()).length + 1;
+            } catch(e) {}
+
+            const record = {
+                id: nextId,
+                date: endDate.toLocaleDateString('ar-EG'),
+                day: new Intl.DateTimeFormat('ar-EG', {weekday:'long'}).format(endDate),
+                amounts: amounts.map(a => parseFloat(a).toFixed(4)),
+                startTimes: [startDate.toLocaleTimeString('ar-EG'), '-', '-', '-'],
+                endTimes: [endDate.toLocaleTimeString('ar-EG'), '-', '-', '-'],
+                durations: [durationStr, '-', '-', '-'],
+                timestamp: sessionFinish,
+                note: 'مُعادة_بناؤها'
+            };
+
+            try {
+                await push(ref(db, 'irr_history'), record);
+                console.log('تم تسجيل الجلسة الفائتة');
             } catch(e) {
-                console.error('خطأ في مسح الجلسة الجارية:', e);
+                console.error('خطأ في تسجيل الجلسة الفائتة:', e);
             }
         }
+
+        // ===================== استعادة / كشف الجلسات الفائتة عند فتح الداشبورد =====================
+        async function restoreActiveSession() {
+            try {
+                // الخطوة 1: قراءة الحالة الراهنة للرشاشات
+                const spSnap = await get(ref(db, 'Sprinklers'));
+                const spData = spSnap.val() || {};
+                const spKeys = ['Sprinkler1','Sprinkler2','Sprinkler3','Sprinkler4'];
+                const currentFlows = spKeys.map(k => parseFloat(spData[k]?.Flow || 0));
+                const stillWatering = currentFlows.some(v => v > 0.1);
+
+                // الخطوة 2: قراءة الجلسة الجارية المحفوظة
+                const csSnap = await get(ref(db, 'current_session'));
+                const savedSession = csSnap.exists() ? csSnap.val() : null;
+
+                // الخطوة 3: قراءة آخر حالة للمنحنى
+                const cdSnap = await get(ref(db, 'chart_data'));
+                const chartData = cdSnap.exists() ? cdSnap.val() : null;
+
+                // --- حالة أ: الري لا يزال جارياً الآن ---
+                if (stillWatering) {
+                    if (savedSession && savedSession.active) {
+                        // استعادة الجلسة الموجودة
+                        sessionData.startTimes = savedSession.startTimes || [null,null,null,null];
+                        sessionData.endTimes = savedSession.endTimes || [null,null,null,null];
+                        sessionData.rawStartTimes = savedSession.rawStartTimes || [null,null,null,null];
+                        sessionData.rawEndTimes = savedSession.rawEndTimes || [null,null,null,null];
+                        sessionData.accumulatedAmounts = savedSession.accumulatedAmounts || [0,0,0,0];
+                        integrationLastTs = savedSession.integrationLastTs || [null,null,null,null];
+                        integrationLastFlow = savedSession.integrationLastFlow || [0,0,0,0];
+                        console.log('تم استعادة جلسة ري جارية من Firebase');
+                    }
+                    // startTracking سيكتشف الري النشط ويبدأ تسجيله
+                    isWatering = false; // اتركه لـ startTracking ليكشفه كـ "بداية جديدة"
+                    return;
+                }
+
+                // --- حالة ب: الري انتهى — كانت هناك جلسة محفوظة (متصفح كان مفتوحاً) ---
+                if (savedSession && savedSession.active) {
+                    console.log('الري انتهى أثناء عدم الاتصال - جاري تسجيل الجلسة...');
+                    sessionData.startTimes = savedSession.startTimes || [null,null,null,null];
+                    sessionData.endTimes = savedSession.endTimes || [null,null,null,null];
+                    sessionData.rawStartTimes = savedSession.rawStartTimes || [null,null,null,null];
+                    sessionData.rawEndTimes = savedSession.rawEndTimes || [null,null,null,null];
+                    sessionData.accumulatedAmounts = savedSession.accumulatedAmounts || [0,0,0,0];
+                    integrationLastTs = savedSession.integrationLastTs || [null,null,null,null];
+                    integrationLastFlow = savedSession.integrationLastFlow || [0,0,0,0];
+
+                    const finishTime = savedSession.lastUpdate || Date.now();
+                    spKeys.forEach((_, i) => {
+                        if (sessionData.rawStartTimes[i] && !sessionData.rawEndTimes[i]) {
+                            if (integrationLastTs[i] !== null) {
+                                sessionData.accumulatedAmounts[i] += integrationLastFlow[i] * ((finishTime - integrationLastTs[i]) / 3600000);
+                            }
+                            sessionData.rawEndTimes[i] = finishTime;
+                            sessionData.endTimes[i] = new Date(finishTime).toLocaleTimeString('ar-EG');
+                            integrationLastTs[i] = null;
+                            integrationLastFlow[i] = 0;
+                        }
+                    });
+                    isWatering = false;
+                    await saveSession(finishTime);
+                    const statusEl = document.getElementById('mainStatus');
+                    if (statusEl) statusEl.innerText = '🔴 النظام متوقف حالياً';
+                    return;
+                }
+
+                // --- حالة ج: لم يكن هناك متصفح مفتوح نهائياً — كشف الجلسة الفائتة من chart_data ---
+                if (chartData && chartData.isWatering === true) {
+                    console.log('كُشفت جلسة فائتة من chart_data - جاري تسجيلها...');
+                    // الحصول على آخر timestamp من الرشاشات
+                    let lastDeviceTs = 0;
+                    spKeys.forEach(k => {
+                        let ts = spData[k]?.timestamp;
+                        if (ts) {
+                            if (ts < 10000000000) ts *= 1000;
+                            if (ts > lastDeviceTs) lastDeviceTs = ts;
+                        }
+                    });
+                    const finishTime = lastDeviceTs || Date.now();
+
+                    // محاولة الحصول على القفل أولاً لمنع التسجيل المزدوج
+                    const lockRef = ref(db, 'save_lock');
+                    let lockAcquired = false;
+                    try {
+                        const res = await runTransaction(lockRef, (cur) => {
+                            if (cur && cur.ts && (Date.now() - cur.ts) < 30000) return undefined;
+                            return { ts: Date.now() };
+                        });
+                        lockAcquired = res.committed;
+                    } catch(e) {}
+
+                    if (lockAcquired) {
+                        await recordMissedSession(chartData, finishTime);
+                        // تمييز chart_data كغير-نشطة
+                        try { await set(ref(db, 'chart_data/isWatering'), false); } catch(e) {}
+                        setTimeout(() => { set(lockRef, { ts: 0 }).catch(()=>{}); }, 1000);
+                    } else {
+                        // جهاز آخر يسجلها الآن
+                        try { await set(ref(db, 'chart_data/isWatering'), false); } catch(e) {}
+                    }
+                    const statusEl = document.getElementById('mainStatus');
+                    if (statusEl) statusEl.innerText = '🔴 النظام متوقف حالياً';
+                }
+
+            } catch(e) {
+                console.error('خطأ في استعادة الجلسة:', e);
+            }
+        }
+
 
         // ===================== وضع الليل =====================
         const themeToggle = document.getElementById('themeToggle');
@@ -799,7 +912,7 @@ input[type="password"]::-ms-reveal,
                             integrationLastFlow[i] = v;
                         }
                     });
-                    // تحديث الجلسة الجارية في Firebase بشكل دوري أثناء الري
+                    // تحديث الجلسة في Firebase أثناء الري
                     saveActiveSession();
                 }
 
@@ -1001,33 +1114,23 @@ input[type="password"]::-ms-reveal,
 
         // ===================== حفظ الجلسة في Firebase =====================
         async function saveSession(finishTime) {
-            // منع التسجيل المتكرر: استخدام Transaction على قفل Firebase
-            if (isSavingSession) {
-                console.log('saveSession: مهملة (جاري الحفظ بالفعل)');
-                return;
-            }
+            // منع التسجيل المتكرر من نفس الجهاز
+            if (isSavingSession) { console.log('saveSession: مهملة (جاري الحفظ)'); return; }
 
-            // محاولة الحصول على القفل باستخدام Transaction لمنع التسجيل من أجهزة متعددة
-            let lockAcquired = false;
+            // قفل ذري يمنع الأجهزة المتعددة من التسجيل في نفس الوقت
             const lockRef = ref(db, 'save_lock');
+            let lockAcquired = false;
             try {
-                const result = await runTransaction(lockRef, (current) => {
-                    // إذا القفل موجود ووقته أقل من 30 ثانية، ارفض
-                    if (current && current.ts && (Date.now() - current.ts) < 30000) {
-                        return undefined; // abort transaction
-                    }
-                    // اكتسب القفل
+                const res = await runTransaction(lockRef, (cur) => {
+                    if (cur && cur.ts && (Date.now() - cur.ts) < 30000) return undefined; // القفل محجوز
                     return { ts: Date.now() };
                 });
-                lockAcquired = result.committed;
-            } catch(e) {
-                console.error('خطأ في اكتساب القفل:', e);
-                lockAcquired = false;
-            }
+                lockAcquired = res.committed;
+            } catch(e) { console.error('خطأ القفل:', e); }
 
             if (!lockAcquired) {
-                console.log('saveSession: لم يُكتسب القفل - جهاز آخر يحفظ الآن');
-                // تصفير بيانات الجلسة المحلية فقط بدون حفظ في قاعدة البيانات
+                console.log('saveSession: جهاز آخر يحفظ الآن');
+                // تصفير بيانات الجلسة المحلية فقط
                 for(let i=0;i<4;i++){
                     sessionData.rawStartTimes[i]=null; sessionData.rawEndTimes[i]=null;
                     sessionData.startTimes[i]=null; sessionData.endTimes[i]=null;
@@ -1080,14 +1183,9 @@ input[type="password"]::-ms-reveal,
                 console.error("خطأ في حفظ الجلسة:", e);
             }
             
-            // مسح الجلسة الجارية من Firebase بعد الحفظ الناجح
+            // مسح الجلسة الجارية ثم تحرير القفل
             await clearActiveSession();
-            
-            // تحرير القفل بعد ثانية
-            setTimeout(() => {
-                set(lockRef, { ts: 0 }).catch(() => {});
-                isSavingSession = false;
-            }, 1000);
+            setTimeout(() => { set(lockRef, { ts: 0 }).catch(()=>{}); isSavingSession = false; }, 1000);
 
             // إعادة تصفير بيانات الجلسة
             for(let i=0;i<4;i++){
