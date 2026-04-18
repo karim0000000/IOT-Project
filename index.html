@@ -10,12 +10,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         input[type="password"]::-ms-reveal,
         input[type="password"]::-ms-clear { display: none !important; }
         input[type="password"]::-webkit-credentials-auto-fill-button,
         input[type="password"]::-webkit-textfield-decoration-container { display: none !important; }
         body.dark-mode #google-map-iframe { filter: invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+        body.dark-mode #map-canvas { filter: invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%); }
         body.dark-mode #weather-box #weather-location { color: #aaa !important; }
         body.dark-mode #weather-box #weather-update-time { color: #666 !important; }
         body.dark-mode #weather-box [style*="background:#fde8e8"] { background: rgba(231,76,60,0.15) !important; }
@@ -204,9 +207,7 @@
                 </div>
                 <div class="box" style="height: 350px; padding: 10px; position: relative;">
                     <h4 style="margin: 0 0 5px 0; text-align: center;">📍 (GPS Live)</h4>
-                    <div id="map-canvas" style="width: 100%; height: 290px; border-radius: 10px;">
-                        <iframe id="google-map-iframe" width="100%" height="100%" frameborder="0" style="border:0; border-radius: 8px;" src="" allowfullscreen></iframe>
-                    </div>
+                    <div id="map-canvas" style="width: 100%; height: 1000px; border-radius: 10px; position: relative; z-index: 0;"></div>
                 </div>
             </div>
 
@@ -305,6 +306,11 @@
 
         let myChart = null;
         let isWatering = false;
+
+        // --- Leaflet Map ---
+        let _leafletMap = null;
+        let _leafletMarker = null;
+        let _mapInitialized = false;
 
         // --- بيانات الجلسة ---
         let sessionData = {
@@ -592,6 +598,38 @@
         };
 
         // ===================== GPS =====================
+        // دالة تهيئة خريطة Leaflet مرة واحدة فقط عند التشغيل
+        function initLeafletMap(lat, lng) {
+            if (_mapInitialized) return;
+            _mapInitialized = true;
+
+            _leafletMap = L.map('map-canvas', {
+                center: [lat, lng],
+                zoom: 15,
+                zoomControl: true
+            });
+
+            // طبقة القمر الصناعي من Esri (مجانية بدون API key)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 19
+            }).addTo(_leafletMap);
+
+            // أيقونة حمراء مخصصة
+            const redIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+
+            _leafletMarker = L.marker([lat, lng], { icon: redIcon })
+                .addTo(_leafletMap)
+                .bindPopup('📍 الموقع الحالي');
+        }
+
         onValue(ref(db, 'GPS_Data'), (snap) => {
             const coords = snap.val() || {};
             console.log("GPS DATA:", coords);
@@ -604,17 +642,21 @@
             if (mapIcon) {
                 mapIcon.onclick = () => {
                     if (lat !== 0 && lng !== 0) {
-                        window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+                        window.open('https://www.google.com/maps?q=' + lat + ',' + lng, '_blank');
                     } else {
                         alert("الإحداثيات غير متوفرة");
                     }
                 };
             }
 
-            const mapIframe = document.getElementById('google-map-iframe');
-            if (mapIframe && lat !== 0 && lng !== 0) {
-                const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
-                if (mapIframe.src !== mapUrl) mapIframe.src = mapUrl;
+            if (lat !== 0 && lng !== 0) {
+                if (!_mapInitialized) {
+                    // التهيئة الأولى: نفتح الخريطة ونزوم على الموقع مرة واحدة فقط
+                    initLeafletMap(lat, lng);
+                } else {
+                    // التحديثات التالية: نحرك الدبوس فقط بدون أي تغيير في الزوم
+                    _leafletMarker.setLatLng([lat, lng]);
+                }
             }
 
             const gpsTimeEl = document.getElementById('gpsTime');
@@ -623,7 +665,7 @@
             if (lat !== 0 && lng !== 0) fetchWeather(lat, lng);
         });
 
-        // ===================== الأرصاد الجوية (OpenWeather) =====================
+                // ===================== الأرصاد الجوية (OpenWeather) =====================
         let _lastWeatherLat = null, _lastWeatherLng = null;
         async function fetchWeather(lat, lng) {
             if (_lastWeatherLat !== null &&
