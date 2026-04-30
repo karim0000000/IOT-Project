@@ -1056,7 +1056,18 @@
                 console.error('خطأ في استعادة الجلسة:', e);
             }
         }
-
+        // ===================== العين لكشف كلمة السر=====================
+                     document.getElementById('togglePwd').addEventListener('click', function() {
+                     const passwordInput = document.getElementById('password');
+                      // التبديل بين نوع password و text
+                      if (passwordInput.type === 'password') {
+                      passwordInput.type = 'text';
+                     this.textContent = '🔒'; // تغيير الشكل للقفل عند الإظهار
+                      } else {
+                     passwordInput.type = 'password';
+                     this.textContent = '👁'; // العودة لشكل العين عند الإخفاء
+ }
+});
         // ===================== وضع الليل =====================
         const themeToggle = document.getElementById('themeToggle');
         const themeText = document.getElementById('themeText');
