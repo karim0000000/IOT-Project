@@ -98,6 +98,8 @@
         body.dark-mode #gpsCoordsBox #gpsLatValue { color: #ff6b6b !important; }
         body.dark-mode #gpsCoordsBox #gpsLngValue { color: #00ff44 !important; }
         body.dark-mode #gpsCoordsBox #gpsTime { color: #dd0101 !important; }
+        body.dark-mode #sprinkler-filter { background: #1a1f2b !important; color: #00f2ff !important; border-color: rgba(0,242,255,0.4) !important; }
+        body.dark-mode #sprinkler-filter-bar label { color: #ffffff !important; }
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .rain-drop {
@@ -295,7 +297,21 @@
 
     <div id="dashboard-page">
         <div id="back-arrow" onclick="goBackToWelcome()" style="position: fixed; top: 50px; left: 0px; z-index: 1000; cursor: pointer; display: flex; align-items: center; background: rgba(52,152,219,0.1); padding: 5px 10px; border-radius: 8px; color: #3498db; font-weight: bold; border: 1px solid #3498db; backdrop-filter: blur(5px);">
-            <span style="font-size: 1.2em; margin-left: 5px;">⬅</span>
+            <span style="font-size: 1em; margin-left: 5px;">⬅</span>
+        </div>
+
+        <!-- ===== قائمة تصفية الرشاشات ===== -->
+        <div id="sprinkler-filter-bar" style="display:flex; justify-content: center; align-items:center; gap: 15px; margin-bottom:10px; flex-wrap:wrap; width: 100%;">
+    <label style="font-weight:bold; font-size:1.2em;">تصفية الرشاشات:</label>
+    <!-- هنا هينزل السليكت أو القائمة المنسدلة اللي الـ AI هيضيفها -->
+            <select id="sprinkler-filter" onchange="applySprinklerFilter(this.value)" style="padding:8px 16px;border-radius:8px;border:2px solid #3498db;font-size:0.95em;font-weight:bold;cursor:pointer;background:#fff;color:#2c3e50;outline:none;box-shadow:0 2px 8px rgba(52,152,219,0.15);">
+                <option value="all">عرض الكل</option>
+                <option value="1-10">عرض 1-10</option>
+                <option value="11-20">عرض 11-20</option>
+                <option value="21-30">عرض 21-30</option>
+                <option value="31-40">عرض 31-40</option>
+                <option value="41-50">عرض 41-50</option>
+            </select>
         </div>
 
         <!-- ===== صناديق الـ 50 رشاش (تُولَّد ديناميكياً) ===== -->
@@ -368,7 +384,7 @@
                                 <tr>
                                     <th style="position: sticky; top: -1px !important; background-color: #2980b9; color: white; z-index: 10; border: 1px solid black; width: 12%;">العملية</th>
                                     <th style="position: sticky; top: -1px !important; background-color: #2980b9; color: white; z-index: 10; border: 1px solid black; width: 18%;">التاريخ</th>
-                                    <th style="position: sticky; top: -1px !important; background-color: #2980b9; color: white; z-index: 10; border: 1px solid black; width: 70%;">كمية المياه (M3) — 50 رشاش</th>
+                                    <th style="position: sticky; top: -1px !important; background-color: #2980b9; color: white; z-index: 10; border: 1px solid black; width: 70%;">كمية المياه (M3) </th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -446,8 +462,74 @@
                     </div>`;
             }
             container.innerHTML = html;
+
+            // Add mouseenter/mouseleave for chart highlighting
+            for (var _bi = 0; _bi < SPRINKLER_COUNT; _bi++) {
+                (function(idx) {
+                    var box = document.getElementById('sbox-' + (idx + 1));
+                    if (!box) return;
+                    box.addEventListener('mouseenter', function() { highlightSprinkler(idx); });
+                    box.addEventListener('mouseleave', function() { resetSprinklerHighlight(); });
+                })(_bi);
+            }
         }
         window.buildSprinklerBoxes = buildSprinklerBoxes;
+
+        // ===================== تمييز الرشاش عند Hover على الصندوق =====================
+        function highlightSprinkler(idx) {
+            if (!myChart) return;
+            var isDark = document.body.classList.contains('dark-mode');
+            var palette = isDark ? FLOW_COLORS_DARK : FLOW_COLORS;
+            myChart.data.datasets.forEach(function(ds, i) {
+                if (i === idx) {
+                    ds.borderWidth = 5;
+                    ds.borderColor = palette[i];
+                    ds.zIndex = 10;
+                } else {
+                    ds.borderWidth = 0.5;
+                    ds.borderColor = hexToRgba(palette[i], 0.12);
+                    ds.zIndex = 0;
+                }
+            });
+            myChart.update('none');
+        }
+
+        function resetSprinklerHighlight() {
+            if (!myChart) return;
+            var isDark = document.body.classList.contains('dark-mode');
+            var palette = isDark ? FLOW_COLORS_DARK : FLOW_COLORS;
+            myChart.data.datasets.forEach(function(ds, i) {
+                ds.borderWidth = isDark ? 2.5 : 2;
+                ds.borderColor = palette[i];
+                ds.zIndex = 0;
+            });
+            myChart.update('none');
+        }
+
+        // ===================== تصفية الرشاشات =====================
+        window.applySprinklerFilter = function(value) {
+            var start = 1, end = 50;
+            if (value !== 'all') {
+                var parts = value.split('-');
+                start = parseInt(parts[0]);
+                end = parseInt(parts[1]);
+            }
+            // Show/hide sprinkler boxes
+            for (var i = 1; i <= 50; i++) {
+                var box = document.getElementById('sbox-' + i);
+                if (box) {
+                    box.style.display = (i >= start && i <= end) ? '' : 'none';
+                }
+            }
+            // Show/hide chart datasets
+            if (myChart) {
+                myChart.data.datasets.forEach(function(ds, i) {
+                    var spNum = i + 1;
+                    ds.hidden = !(spNum >= start && spNum <= end);
+                });
+                myChart.update('none');
+            }
+        };
 
         let lastFirebaseTime = 0;
         let lastActiveFirebaseTime = 0;
@@ -494,6 +576,14 @@
 
         // --- متغيرات لمتابعة آخر قيم للمنحنى ---
         let lastChartFlows = null;
+
+        // ====== fullChartData: يحفظ كل نقاط المنحنى بدون حد (للتصدير الكامل) ======
+        let fullChartData = {
+            labels: [],
+            datasets: Array.from({length: SPRINKLER_COUNT}, () => [])
+        };
+        // flag: لا نحفظ في Firebase ولا نضيف نقاط حتى يكتمل تحميل full_chart_data
+        let fullChartDataLoaded = false;
 
         window._sessionData = sessionData;
         window._integrationLastTs = integrationLastTs;
@@ -999,6 +1089,21 @@
                         });
                     } else if (!anyOn && isWatering_prev) { myChart.data.labels.push(timeStr+' ⏹'); myChart.data.datasets.forEach(ds=>ds.data.push(0)); }
 
+                    // ====== Mirror to fullChartData (بدون حد للتصدير) - فقط بعد اكتمال التحميل ======
+                    if (fullChartDataLoaded) {
+                        if (anyOn && !isWatering_prev) {
+                            fullChartData.labels.push(timeStr+' ▶');
+                            fullChartData.datasets.forEach(d => d.push(0));
+                        }
+                        if (anyOn) {
+                            fullChartData.labels.push(timeStr);
+                            flows.forEach((v, i) => { fullChartData.datasets[i].push(v); });
+                        } else if (!anyOn && isWatering_prev) {
+                            fullChartData.labels.push(timeStr+' ⏹');
+                            fullChartData.datasets.forEach(d => d.push(0));
+                        }
+                    }
+
                     while (myChart.data.labels.length > 60) {
                         myChart.data.labels.shift();
                         myChart.data.datasets.forEach(ds => ds.data.shift());
@@ -1016,6 +1121,19 @@
                         chartDataToSave['f' + (i+1)] = myChart.data.datasets[i] ? myChart.data.datasets[i].data : [];
                     }
                     set(ref(db, 'chart_data'), chartDataToSave).catch(err => console.error("خطأ حفظ المنحنى:", err));
+
+                    // ====== حفظ full_chart_data في Firebase (فقط بعد اكتمال التحميل) ======
+                    if (fullChartDataLoaded) {
+                        const fullDataToSave = {
+                            labels: fullChartData.labels,
+                            isWatering: isWatering,
+                            sprinklerCount: SPRINKLER_COUNT
+                        };
+                        for (let i = 0; i < SPRINKLER_COUNT; i++) {
+                            fullDataToSave['f' + (i+1)] = fullChartData.datasets[i];
+                        }
+                        set(ref(db, 'full_chart_data'), fullDataToSave).catch(err => {});
+                    }
 
                     lastChartFlows = [...flows];
                 }
@@ -1318,10 +1436,38 @@
                         y: { beginAtZero: true, grid: { color: '#ddd' }, ticks: { color: '#666' } },
                         x: { grid: { color: '#ddd' }, ticks: { color: '#666' } }
                     },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'xy',
+                        intersect: false
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom',
                             labels: { color: '#666', boxWidth: 12, padding: 6, font: { size: 10 } }
+                        },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                title: function(items) {
+                                    if (items.length > 0) {
+                                        return 'رشاش ' + items[0].dataset.label;
+                                    }
+                                    return '';
+                                },
+                                label: function(item) {
+                                    return item.parsed.y.toFixed(2) + ' M3/hr';
+                                }
+                            },
+                            backgroundColor: 'rgba(30,30,50,0.92)',
+                            titleColor: '#00f2ff',
+                            bodyColor: '#ffffff',
+                            borderColor: 'rgba(0,242,255,0.5)',
+                            borderWidth: 1,
+                            padding: 10,
+                            titleFont: { size: 13, weight: 'bold' },
+                            bodyFont: { size: 12 },
+                            cornerRadius: 8
                         }
                     }
                 }
@@ -1355,9 +1501,125 @@
                     myChart.update('none');
                 }
             }).catch(err => console.error("خطأ تحميل بيانات المنحنى:", err));
+
+            // تحميل full_chart_data من Firebase
+            get(ref(db, 'full_chart_data')).then(snap => {
+                if (snap.exists()) {
+                    const fcd = snap.val();
+                    fullChartData.labels = fcd.labels || [];
+                    for (let i = 0; i < SPRINKLER_COUNT; i++) {
+                        fullChartData.datasets[i] = fcd['f' + (i+1)] || [];
+                    }
+                }
+                // السماح بالإضافة والحفظ بعد اكتمال التحميل
+                fullChartDataLoaded = true;
+            }).catch(() => {
+                fullChartDataLoaded = true;
+            });
         };
 
         window.initChart = window.initChart;
+
+        // ===================== بناء صورة المنحنى الكامل للتصدير =====================
+        function buildFullChartImage() {
+            return new Promise((resolve) => {
+                const labels = fullChartData.labels.length > 0
+                    ? fullChartData.labels
+                    : (myChart ? [...myChart.data.labels] : []);
+
+                // ====== لوحة ألوان زاهية وواضحة للتصدير (50 لون مميز) ======
+                const EXPORT_COLORS = (function() {
+                    const golden = 137.508;
+                    const cols = [];
+                    for (let i = 0; i < 50; i++) {
+                        const hue = (i * golden) % 360;
+                        // تشبع عالي 90-100% وسطوع متوسط 40-50% لضمان ظهور واضح على الأبيض
+                        const s = [90, 95, 100, 92, 98][i % 5];
+                        const l = [40, 45, 35, 42, 48][i % 5];
+                        const h = hue / 360, sl = s / 100, ll = l / 100;
+                        const a = sl * Math.min(ll, 1 - ll);
+                        const f = n => { const k = (n + h * 12) % 12; return ll - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+                        const toHex = x => Math.round(x * 255).toString(16).padStart(2, '0');
+                        cols.push('#' + toHex(f(0)) + toHex(f(8)) + toHex(f(4)));
+                    }
+                    return cols;
+                })();
+
+                const datasets = EXPORT_COLORS.map((color, i) => ({
+                    label: 'F' + (i+1),
+                    borderColor: color,
+                    backgroundColor: color,
+                    data: fullChartData.datasets[i] && fullChartData.datasets[i].length > 0
+                        ? [...fullChartData.datasets[i]]
+                        : (myChart && myChart.data.datasets[i] ? [...myChart.data.datasets[i].data] : []),
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 3
+                }));
+
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = 2400;
+                offCanvas.height = 1000;
+                offCanvas.style.cssText = 'position:absolute;left:-99999px;top:0;';
+                document.body.appendChild(offCanvas);
+
+                // خلفية بيضاء صريحة قبل رسم المنحنى
+                const ctx2d = offCanvas.getContext('2d');
+                ctx2d.fillStyle = '#ffffff';
+                ctx2d.fillRect(0, 0, offCanvas.width, offCanvas.height);
+
+                const offChart = new Chart(offCanvas, {
+                    type: 'line',
+                    data: { labels: labels, datasets: datasets },
+                    options: {
+                        responsive: false,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        devicePixelRatio: 2,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#cccccc' },
+                                ticks: { color: '#111', font: { size: 13, weight: 'bold' } }
+                            },
+                            x: {
+                                grid: { color: '#cccccc' },
+                                ticks: { color: '#111', maxRotation: 45, minRotation: 0, font: { size: 11 } }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#111',
+                                    boxWidth: 24,
+                                    boxHeight: 14,
+                                    padding: 12,
+                                    font: { size: 13, weight: 'bold', family: 'Arial,sans-serif' }
+                                }
+                            },
+                            tooltip: { enabled: false }
+                        }
+                    }
+                });
+
+                setTimeout(() => {
+                    // رسم خلفية بيضاء مجدداً فوق Chart.js (احتياطي)
+                    const ctxFinal = offCanvas.getContext('2d');
+                    ctxFinal.globalCompositeOperation = 'destination-over';
+                    ctxFinal.fillStyle = '#ffffff';
+                    ctxFinal.fillRect(0, 0, offCanvas.width, offCanvas.height);
+                    ctxFinal.globalCompositeOperation = 'source-over';
+
+                    const imgData = offCanvas.toDataURL('image/png', 1.0);
+                    offChart.destroy();
+                    try { document.body.removeChild(offCanvas); } catch(e) {}
+                    resolve(imgData);
+                }, 700);
+            });
+        }
+        window.buildFullChartImage = buildFullChartImage;
 
         // ===================== تصدير Excel + PDF + ZIP (50 رشاش) =====================
         window.exportToExcel = async function() {
@@ -1383,6 +1645,23 @@
 
             const dateStr = new Date().toLocaleDateString('en-GB', {timeZone:'Africa/Cairo'}).replace(/\//g, '-');
 
+                // ====== أسماء المهندسين والمشرف ======
+                const ENGINEERS = "م/كريم عمرو—م/نادر رامز—م/أمنية علاء—م/نجوى وجيه—م/فاطمة علي—م/الشيماء جمال—م/أحمد ياسر—م/أحمد باسم—م/أمين حجاج—م/سيف الدين حسين";
+
+                // ====== جلب شعار الجامعة (Logo2) من Firebase ======
+                let logoSrc = null;
+                let logoPngBuffer = null;
+                try {
+                    const logoSnap = await get(ref(db, 'Logo2'));
+                    if (logoSnap.exists()) {
+                        logoSrc = logoSnap.val();
+                        if (logoSrc && typeof logoSrc === 'string') {
+                            const resp = await fetch(logoSrc, {mode:'cors'});
+                            logoPngBuffer = await resp.arrayBuffer();
+                        }
+                    }
+                } catch(e) { console.log('Logo2 fetch:', e); }
+
             try {
                 const N = SPRINKLER_COUNT;          // 50
                 const PER_ROW = 10;                  // 10 رشاشات في الصف
@@ -1399,19 +1678,33 @@
                 ];
                 const ROWS_PER_OP = sections.length * ROWS_PER_SECTION; // 20 صف لكل عملية
 
-                // الصف الأول: العنوان (يُدمَج عبر كل الأعمدة)
-                const titleRow = ["تقرير نظام IOT (مشروع تخرج المستوى الرابع) — 50 رشاش"];
+                // ====== صفوف الترويسة العلوية (7 صفوف) ======
+                const HDR_ROWS = 4;
+                const hdrData = [
+                    ["","","إعداد المهندسين:","","","","","","","جامعة عين شمس","","",""],
+                    ["","",ENGINEERS,"","","","","","","كلية الزراعة","","",""],
+                    ["","","تحت إشراف","","","","","","","قسم الهندسة الزراعية","","",""],
+                    ["","","أ.د.ياسر عزت","","","","","","","مشروع تخرج طلاب المستوى الرابع","","",""],    
+                ];
+
+                // الصف الرئيسي: العنوان (يُدمَج عبر كل الأعمدة)
+                const titleRow = ["تقرير نظام IOT (مشروع تخرج المستوى الرابع)"];
                 while (titleRow.length < totalCols) titleRow.push("");
 
-                // الصف الثاني: ترويسة الأعمدة
-                const headerRow = ["العملية", "التاريخ", "نوع البيانات", "البيانات (50 رشاش)"];
+                // صف ترويسة الأعمدة
+                const headerRow = ["العملية", "التاريخ", "نوع البيانات", "بيانات الري"];
                 while (headerRow.length < totalCols) headerRow.push("");
 
-                const dataArr = [titleRow, headerRow];
+                const dataArr = [...hdrData, titleRow, headerRow];
 
                 const merges = [
-                    { s: { r:0,c:0 }, e: { r:0,c:totalCols-1 } },           // عنوان
-                    { s: { r:1,c:FIXED_COLS }, e: { r:1,c:totalCols-1 } }   // ترويسة البيانات
+                    // ====== دمج صفوف الترويسة ======
+                    { s:{r:0,c:0}, e:{r:HDR_ROWS-1,c:1} },
+                    ...Array.from({length:HDR_ROWS}, (_,i) => ({s:{r:i,c:2},e:{r:i,c:8}})),
+                    ...Array.from({length:HDR_ROWS}, (_,i) => ({s:{r:i,c:9},e:{r:i,c:totalCols-1}})),
+                    // ====== العنوان وترويسة الأعمدة (مُزاحة بـ HDR_ROWS) ======
+                    { s: { r:HDR_ROWS,c:0 }, e: { r:HDR_ROWS,c:totalCols-1 } },
+                    { s: { r:HDR_ROWS+1,c:FIXED_COLS }, e: { r:HDR_ROWS+1,c:totalCols-1 } }
                 ];
 
                 const opBlocks = [];      // {start, end} لكل عملية للـ thick border
@@ -1449,6 +1742,8 @@
 
                 const ws = XLSX.utils.aoa_to_sheet(dataArr);
                 ws['!merges'] = merges;
+                ws['!views'] = [{ showGridLines: false }];
+                ws['!rows'] = Array.from({length: HDR_ROWS}, () => ({hpt: 28}));
 
                 const range = XLSX.utils.decode_range(ws['!ref']);
                 for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -1459,7 +1754,53 @@
                             alignment: { vertical: "center", horizontal: "center", wrapText: true },
                             border: { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } }
                         };
-                        if (R <= 1) { ws[cell_ref].s.fill = { fgColor: { rgb: "E0E0E0" } }; ws[cell_ref].s.font = { bold: true }; }
+                        if (R === HDR_ROWS || R === HDR_ROWS + 1) { ws[cell_ref].s.fill = { fgColor: { rgb: "E0E0E0" } }; ws[cell_ref].s.font = { bold: true }; }
+                    }
+                }
+
+                // ====== تنسيق صفوف الترويسة: بوردر سميك من الخارج فقط + بدون بوردر داخلي ======
+                for (let R = 0; R < HDR_ROWS; R++) {
+                    for (let C = 0; C < totalCols; C++) {
+                        const cr = XLSX.utils.encode_cell({r:R, c:C});
+                        if (!ws[cr]) ws[cr] = {t:'s', v:''};
+
+                        // حساب حدود الخلية (خارجي سميك، داخلي بدون)
+                        const isTopRow    = R === 0;
+                        const isBottomRow = R === HDR_ROWS - 1;
+                        const border = {
+                            top:    isTopRow    ? {style:"thick"} : {style:"none"},
+                            bottom: isBottomRow ? {style:"thick"} : {style:"none"},
+                            left:   {style:"none"},
+                            right:  {style:"none"}
+                        };
+
+                        let fill, font;
+
+                        if (C <= 1) {
+                            // منطقة الشعار (أزرق فاتح)
+                            fill = {fgColor:{rgb:"EBF5FB"}};
+                            font = {bold:false, sz:10, color:{rgb:"333333"}};
+                            // بوردر يسار/يمين للمنطقة فقط
+                            if (C === 0) border.left  = {style:"thick"};
+                            if (C === 1) border.right = {style:"thick"};
+                        } else if (C <= 8) {
+                            // منطقة المهندسين (أزرق فاتح)
+                            fill = {fgColor:{rgb:"EBF5FB"}};
+                            if (R === 0)      font = {bold:true,  sz:13, color:{rgb:"1A3A8C"}};
+                            else if (R === 1) font = {bold:true,  sz:10, color:{rgb:"154360"}};
+                            else if (R === 2) font = {bold:true,  sz:15, color:{rgb:"555555"}};
+                            else              font = {bold:true,  sz:17, color:{rgb:"C0392B"}};
+                            if (C === 2) border.left  = {style:"thick"};
+                            if (C === 8) border.right = {style:"thick"};
+                        } else {
+                            // منطقة الجامعة (أخضر فاتح)
+                            fill = {fgColor:{rgb:"EAFAF1"}};
+                            font = {bold:true, sz:13, color:{rgb:"1F5C1F"}};
+                            if (C === 9)            border.left  = {style:"thick"};
+                            if (C === totalCols-1)  border.right = {style:"thick"};
+                        }
+
+                        ws[cr].s = { alignment:{vertical:"center",horizontal:"center",wrapText:true}, border, fill, font };
                     }
                 }
 
@@ -1504,87 +1845,46 @@
                 ];
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "نتائج الري");
-                const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                let excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 
-                if (isDarkMode) document.body.classList.remove('dark-mode');
-                if (typeof updateChartColors === "function") updateChartColors(false);
-                applySprinklerBoxColors(false);
-                await new Promise(resolve => setTimeout(resolve, 800));
-
-                const captureOptions = {
-                    scale: 2, useCORS: true, backgroundColor: "#ffffff",
-                    onclone: (clonedDoc) => {
-                        clonedDoc.querySelectorAll('*').forEach(node => {
-                            node.style.filter = 'none';
-                            node.style.textShadow = 'none';
-                            node.style.boxShadow = 'none';
-                        });
-                        clonedDoc.querySelectorAll('.chart-container, table, .box').forEach(c => {
-                            c.style.setProperty('background', '#ffffff', 'important');
-                            c.style.setProperty('color', '#000000', 'important');
-                        });
-                    }
-                };
-
-                // ====== رفع جودة مفتاح المنحنيات (Legend) قبل التصوير ======
-                let _origLegend = null, _origDPR = null, _origAnim = null;
-                if (myChart) {
-                    _origDPR = myChart.options.devicePixelRatio;
-                    _origAnim = myChart.options.animation;
-                    if (myChart.options.plugins && myChart.options.plugins.legend) {
-                        const lg = myChart.options.plugins.legend.labels || {};
-                        _origLegend = {
-                            color: lg.color,
-                            boxWidth: lg.boxWidth,
-                            boxHeight: lg.boxHeight,
-                            padding: lg.padding,
-                            fontSize: lg.font && lg.font.size,
-                            fontWeight: lg.font && lg.font.weight,
-                            usePointStyle: lg.usePointStyle
-                        };
-                        myChart.options.plugins.legend.labels = {
-                            ...lg,
-                            color: '#111',
-                            boxWidth: 28,
-                            boxHeight: 14,
-                            padding: 12,
-                            usePointStyle: false,
-                            font: { size: 16, weight: 'bold', family: 'Arial, sans-serif' }
-                        };
-                    }
-                    myChart.options.devicePixelRatio = 4;
-                    myChart.options.animation = false;
-                    myChart.update('none');
-                    myChart.resize();
-                    await new Promise(r => setTimeout(r, 300));
+                // ====== حقن شعار الجامعة في ملف Excel (عبر JSZip) ======
+                if (logoPngBuffer) {
+                    try {
+                        const xlsxZip = await JSZip.loadAsync(excelBuffer);
+                        xlsxZip.file('xl/media/image1.png', logoPngBuffer);
+                        const drawingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>0</xdr:col><xdr:colOff>57600</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>57600</xdr:rowOff></xdr:from><xdr:to><xdr:col>2</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>7</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="2" name="Logo"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1800000" cy="1200000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>`;
+                        xlsxZip.file('xl/drawings/drawing1.xml', drawingXml);
+                        const drawingRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/></Relationships>`;
+                        xlsxZip.file('xl/drawings/_rels/drawing1.xml.rels', drawingRels);
+                        const sheetFiles = Object.keys(xlsxZip.files).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+                        if (sheetFiles.length > 0) {
+                            const sheetPath = sheetFiles[0];
+                            let sheetXml = await xlsxZip.file(sheetPath).async('string');
+                            if (!sheetXml.includes('<drawing')) {
+                                sheetXml = sheetXml.replace('</worksheet>', '<drawing xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId_img1"/></worksheet>');
+                                xlsxZip.file(sheetPath, sheetXml);
+                            }
+                            const sheetName = sheetPath.split('/').pop();
+                            const relsPath = `xl/worksheets/_rels/${sheetName}.rels`;
+                            const relsFile = xlsxZip.file(relsPath);
+                            let sheetRels = relsFile ? await relsFile.async('string') : null;
+                            if (sheetRels) {
+                                sheetRels = sheetRels.replace('</Relationships>', '<Relationship Id="rId_img1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
+                            } else {
+                                sheetRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId_img1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>`;
+                            }
+                            xlsxZip.file(relsPath, sheetRels);
+                        }
+                        let ct = await xlsxZip.file('[Content_Types].xml').async('string');
+                        if (!ct.includes('drawing+xml')) ct = ct.replace('</Types>', '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+                        if (!ct.includes('.png')) ct = ct.replace('</Types>', '<Default Extension="png" ContentType="image/png"/></Types>');
+                        xlsxZip.file('[Content_Types].xml', ct);
+                        excelBuffer = await xlsxZip.generateAsync({type:'arraybuffer'});
+                    } catch(e) { console.error('Logo inject error:', e); }
                 }
 
-                // التقاط المنحنى مباشرةً من Canvas الأصلي بدقة عالية للحصول على Legend واضح وحاد
-                let chartImgData;
-                const chartCanvasEl = document.getElementById('myChart');
-                if (chartCanvasEl) {
-                    chartImgData = chartCanvasEl.toDataURL('image/png', 1.0);
-                }
-                // نسخة احتياطية: تصوير الحاوية بـ html2canvas بمقياس أعلى
-                const chartElement = document.querySelector('.chart-container');
-                const chartCanvas = await html2canvas(chartElement, { ...captureOptions, scale: 4 });
-                if (!chartImgData) chartImgData = chartCanvas.toDataURL('image/png');
-
-                // ====== استرجاع إعدادات Legend الأصلية ======
-                if (myChart) {
-                    if (_origLegend && myChart.options.plugins && myChart.options.plugins.legend) {
-                        myChart.options.plugins.legend.labels = {
-                            color: _origLegend.color,
-                            boxWidth: _origLegend.boxWidth,
-                            padding: _origLegend.padding,
-                            font: { size: _origLegend.fontSize, weight: _origLegend.fontWeight }
-                        };
-                    }
-                    myChart.options.devicePixelRatio = _origDPR;
-                    myChart.options.animation = _origAnim;
-                    myChart.update('none');
-                    myChart.resize();
-                }
+                // ====== بناء صورة المنحنى الكامل (من بداية الري للنهاية) ======
+                const chartImgData = await buildFullChartImage();
 
                 // ====== التقاط كل عمليتين كصورة منفصلة ======
                 const theadEl = document.querySelector('#historyTable thead');
@@ -1634,46 +1934,89 @@
                 }
 
                 const { jsPDF } = window.jspdf;
-                // PDF أفقي عشان 50 عمود/خط
                 const pdf = new jsPDF('l', 'mm', 'a4');
+
+                // ====== بناء صورة ترويسة PDF (HTML → html2canvas) ======
+                async function buildPdfHeader() {
+                    const outer = document.createElement('div');
+                    outer.style.cssText = 'position:fixed;left:-12000px;top:0;width:1200px;background:#fff;display:flex;direction:rtl;border:2px solid #555;font-family:Arial,sans-serif;z-index:-9999;';
+
+                    const rightDiv = document.createElement('div');
+                    rightDiv.style.cssText = 'width:240px;min-width:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;text-align:center;background:#eafaf1;';
+                    rightDiv.innerHTML = `<div style="font-size:18px;font-weight:bold;color:#1f5c1f;margin:4px 0">جامعة عين شمس</div><div style="font-size:15px;font-weight:bold;color:#1f5c1f;margin:3px 0">كلية الزراعة</div><div style="font-size:15px;font-weight:bold;color:#1f5c1f;margin:3px 0">قسم الهندسة الزراعية</div><div style="font-size:13px;font-weight:bold;color:#1f5c1f;margin:3px 0">مشروع تخرج طلاب المستوى الرابع</div>`;
+
+                    const centerDiv = document.createElement('div');
+                    centerDiv.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;text-align:center;background:#ebf5fb;border-right:1px solid #aaa;border-left:1px solid #aaa;';
+                    const engLines = ENGINEERS.split('—').map(n=>`<span style="color:#154360">${n}</span>`).join(' — ');
+                    centerDiv.innerHTML = `<div style="font-size:16px;font-weight:bold;color:#1a3a8c;text-decoration:underline;margin-bottom:8px">إعداد المهندسين:</div><div style="font-size:12px;line-height:1.6;margin-bottom:10px">${engLines}</div><div style="font-size:14px;color:#333;margin-bottom:4px">تحت إشراف</div><div style="font-size:18px;font-weight:bold;color:#c0392b">أ.د.ياسر عزت</div>`;
+
+                    const logoDiv = document.createElement('div');
+                    logoDiv.style.cssText = 'width:190px;min-width:190px;display:flex;align-items:center;justify-content:center;padding:8px;background:#f0f8ff;';
+                    if (logoSrc) {
+                        const img = document.createElement('img');
+                        img.src = logoSrc; img.crossOrigin = 'anonymous';
+                        img.style.cssText = 'max-width:170px;max-height:140px;object-fit:contain;';
+                        logoDiv.appendChild(img);
+                    }
+
+                    outer.appendChild(rightDiv);
+                    outer.appendChild(centerDiv);
+                    outer.appendChild(logoDiv);
+                    document.body.appendChild(outer);
+                    if (logoSrc) await new Promise(r => setTimeout(r, 900));
+                    const cnv = await html2canvas(outer, {scale:2, useCORS:true, backgroundColor:'#ffffff'});
+                    document.body.removeChild(outer);
+                    return cnv.toDataURL('image/png');
+                }
+
+                const pdfHeaderImg = await buildPdfHeader();
+                const PDF_HDR_H = 52; // ارتفاع الترويسة في mm
+                const PDF_DATA_Y = 8 + PDF_HDR_H + 4; // y حيث تبدأ البيانات
+
+                // ====== حساب ارتفاع الترويسة مرة واحدة ======
+                const hPropsOnce = pdf.getImageProperties(pdfHeaderImg);
+                const hWOnce = 280;
+                const hHOnce = Math.min((hPropsOnce.height * hWOnce) / hPropsOnce.width, PDF_HDR_H);
 
                 // ====== صفحات العمليات (كل عمليتين في صفحة) ======
                 for (let p = 0; p < pairImgs.length; p++) {
                     if (p > 0) pdf.addPage();
                     pdf.setFont("helvetica", "bold");
-                    pdf.setFontSize(18);
+                    pdf.setFontSize(15);
                     pdf.setTextColor(40, 40, 40);
-                    pdf.text("IoT Irrigation System Report — 50 Flow Sensors", 148, 15, { align: "center" });
-                    pdf.setFont("helvetica", "normal");
-                    pdf.setFontSize(10);
-                    pdf.setTextColor(100, 100, 100);
-                    pdf.text(`Generated: ${new Date().toLocaleString('en-US', {timeZone:'Africa/Cairo'})}`, 148, 22, { align: "center" });
-                    pdf.setDrawColor(200, 200, 200);
-                    pdf.line(20, 25, 277, 25);
+                    pdf.text("IoT Irrigation System Report", 148, 7, { align: "center" });
+                    pdf.setTextColor(0, 0, 0);
 
+                    // الترويسة في الصفحة الأولى فقط
+                    let dataStartY = 10;
+                    if (p === 0) {
+                        pdf.addImage(pdfHeaderImg, 'PNG', (297 - hWOnce) / 2, 9, hWOnce, hHOnce);
+                        dataStartY = 9 + hHOnce + 3;
+                    }
+
+                    // جدول البيانات
                     const props = pdf.getImageProperties(pairImgs[p]);
-                    const wMM = 280;
-                    const hMM = (props.height * wMM) / props.width;
-                    const maxH = 170;
-                    const finalH = Math.min(hMM, maxH);
-                    pdf.addImage(pairImgs[p], 'PNG', (297 - wMM) / 2, 30, wMM, finalH);
+                    const wMM = 280, maxH = 200 - dataStartY;
+                    const finalH = Math.min((props.height * wMM) / props.width, maxH);
+                    pdf.addImage(pairImgs[p], 'PNG', (297 - wMM) / 2, dataStartY, wMM, finalH);
                 }
 
-                // ====== الصفحة الأخيرة: المنحنى فقط ======
+                // ====== صفحة المنحنى (بدون ترويسة) ======
                 if (pairImgs.length > 0) pdf.addPage();
                 pdf.setFont("helvetica", "bold");
-                pdf.setFontSize(16);
-                pdf.setTextColor(40, 40, 40);
-                pdf.text("Irrigation Data Visualization (50 Sensors)", 148, 15, { align: "center" });
+                pdf.setFontSize(15);
+                pdf.text("Irrigation Data Visualization (50 Sensors)", 148, 7, { align: "center" });
                 const chartProps = pdf.getImageProperties(chartImgData);
-                const imgW = 260, imgH = (chartProps.height * imgW) / chartProps.width;
-                const xPos = (297 - imgW) / 2;
-                pdf.addImage(chartImgData, 'PNG', xPos, 25, imgW, Math.min(imgH, 170));
+                const imgW = 260, chartY = 12;
+                const imgH = Math.min((chartProps.height * imgW) / chartProps.width, 195 - chartY);
+                pdf.addImage(chartImgData, 'PNG', (297 - imgW) / 2, chartY, imgW, imgH);
 
                 const zip = new JSZip();
                 zip.file(`Detailed_Report_${dateStr}.xlsx`, excelBuffer);
                 zip.file(`Summary_Report_${dateStr}.pdf`, pdf.output('blob'));
-                zip.file(`Chart_Analysis_${dateStr}.png`, await new Promise(resolve => chartCanvas.toBlob(resolve, 'image/png')));
+                // تحويل base64 إلى blob للحفظ في zip
+                const chartImgBlob = await fetch(chartImgData).then(r => r.blob());
+                zip.file(`Chart_Analysis_${dateStr}.png`, chartImgBlob);
                 saveAs(await zip.generateAsync({type:"blob"}), `Irrigation_Project_${dateStr}.zip`);
 
             } catch (error) {
@@ -1693,6 +2036,8 @@
                 try {
                     await remove(ref(db, 'irr_history'));
                     await remove(ref(db, 'chart_data'));
+                    await remove(ref(db, 'full_chart_data'));
+                    fullChartData = { labels: [], datasets: Array.from({length: SPRINKLER_COUNT}, () => []) };
                     console.log("تم حذف السجل والمنحنى من Firebase");
                 } catch(e) {
                     console.error("خطأ في الحذف من Firebase:", e);
