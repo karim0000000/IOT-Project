@@ -601,39 +601,42 @@
                 <div class="box" style="text-align:center;">
                     <h3 id="mainStatus" style="margin:0;">النظام متوقف حالياً</h3>
                 </div>
-                <div class="box" style="height: 280px; display: flex; flex-direction: column;">
+                <div class="box" style="height: 450px; display: flex; flex-direction: column;">
                     <h4 style="color:red; text-align:center; margin:0 0 10px 0;">⚠️ سجل الأعطال</h4>
                     <div id="errorLog" style="flex-grow: 1; overflow-y: auto; background: #fff9f5; border-radius: 8px; padding: 10px;"></div>
                 </div>
 
                 <div class="box" id="weather-box">
-                    <h4 style="text-align:center; margin:0 0 8px 0;">🌤️ الأرصاد الجوية</h4>
-                    <div id="weather-location" style="text-align:center; font-size:0.82em; color:#555; margin-bottom:10px;">في انتظار بيانات GPS...</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                        <div style="background:#fde8e8; border-radius:12px; padding:10px; text-align:center; border-bottom:3px solid #e74c3c;">
-                            <div style="font-size:1.4em;">🌡️</div>
-                            <div style="font-size:0.72em; color:#e74c3c; margin:3px 0;">درجة الحرارة</div>
-                            <div id="w-temp" style="font-size:1.2em; font-weight:bold; color:#e74c3c;">--</div>
-                        </div>
-                        <div style="background:#e3f2fd; border-radius:12px; padding:10px; text-align:center; border-bottom:3px solid #3498db;">
-                            <div style="font-size:1.4em;">💧</div>
-                            <div style="font-size:0.72em; color:#3498db; margin:3px 0;">الرطوبة الجوية</div>
-                            <div id="w-humidity" style="font-size:1.2em; font-weight:bold; color:#3498db;">--</div>
-                        </div>
-                        <div style="background:#e8f5e9; border-radius:12px; padding:10px; text-align:center; border-bottom:3px solid #2ecc71;">
-                            <div style="font-size:1.4em;">💨</div>
-                            <div style="font-size:0.72em; color:#2ecc71; margin:3px 0;">سرعة الرياح</div>
-                            <div id="w-wind" style="font-size:1.2em; font-weight:bold; color:#2ecc71;">--</div>
-                        </div>
-                        <div style="background:#f3e5f5; border-radius:12px; padding:10px; text-align:center; border-bottom:3px solid #9b59b6;">
-                            <div style="font-size:1.4em;">🌧️</div>
-                            <div style="font-size:0.72em; color:#9b59b6; margin:3px 0;">بخر نتح / أمطار</div>
-                            <div id="w-rain" style="font-size:1.2em; font-weight:bold; color:#9b59b6;">--</div>
-                        </div>
-                    </div>
-                    <div id="weather-update-time" style="text-align:center; font-size:0.68em; color:#aaa; margin-top:8px;"></div>
-                </div>
+    <h4 style="text-align:center; margin:0 0 8px 0;">🌤️ الأرصاد الجوية</h4>
+    <div id="weather-location" style="text-align:center; font-size:0.82em; color:#555; margin-bottom:10px;">Bilqās, EG 📍</div>
+    
+    <!-- الحاوية الأساسية بتقسيم عمودين -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        
+        <!-- صندوق الحرارة -->
+        <div style="background:#fde8e8; border-radius:12px; padding:10px; text-align:center; border-bottom:3px solid #e74c3c;">
+            <div style="font-size:1.4em;">🌡️</div>
+            <div style="font-size:0.72em; color:#e74c3c; margin:3px 0;">درجة الحرارة</div>
+            <div id="w-temp" style="font-size:1.2em; font-weight:bold; color:#e74c3c;">14.7 C°</div>
+        </div>
 
+        <!-- صندوق الرطوبة -->
+        <div style="background:#e3f2fd; border-radius:12px; padding:10px; text-align:center; border-bottom:3px solid #3498db;">
+            <div style="font-size:1.4em;">💧</div>
+            <div style="font-size:0.72em; color:#3498db; margin:3px 0;">الرطوبة الجوية</div>
+            <div id="w-humidity" style="font-size:1.2em; font-weight:bold; color:#3498db;">84 %</div>
+        </div>
+
+        <!-- صندوق سرعة الرياح - واخد العرض كله -->
+        <div style="background:#e8f5e9; border-radius:50px; padding:15px; text-align:center; border-bottom:3px solid #2ecc71; grid-column: span 2;">
+            <div style="font-size:1.4em;">💨</div>
+            <div style="font-size:0.72em; color:#2ecc71; margin:3px 0;">سرعة الرياح</div>
+            <div id="w-wind" style="font-size:1.2em; font-weight:bold; color:#2ecc71;">0.9 m/s</div>
+        </div>
+        
+    </div>
+    <div id="weather-update-time" style="text-align:center; font-size:0.68em; color:#aaa; margin-top:8px;">آخر تحديث: ٠٥:٠٢:٢٧ ص</div>
+</div>
                 <div class="box">
                     <h4 style="text-align:center; margin:0 0 10px 0;">📊 سجل الري</h4>
                     <div class="scroll-area" style="max-height: 400px; overflow:auto; position: relative;">
@@ -1718,8 +1721,8 @@
             f.forEach((v,i)=>{
                 if(v<0.1) html+=`<div class="error-msg">⚠️ رشاش ${i+1} لا يعمل</div>`;
                 else {
-                    if(v>10) html+=`<div class="error-msg" style="color:#c0392b">🚨 رشاش ${i+1}: تصرف مرتفع جداً (${v.toFixed(2)} M3/hr)</div>`;
-                    else if(v<5) html+=`<div class="error-msg" style="color:#e67e22">⚠️ رشاش ${i+1}: تصرف منخفض (${v.toFixed(2)} M3/hr)</div>`;
+                    if(v>4.8) html+=`<div class="error-msg" style="color:#c0392b">🚨 رشاش ${i+1}: تصرف مرتفع  (${v.toFixed(2)} M3/hr)</div>`;
+                    else if(v<0.45) html+=`<div class="error-msg" style="color:#e67e22">⚠️ رشاش ${i+1}: تصرف منخفض (${v.toFixed(2)} M3/hr)</div>`;
                 }
             });
             log.innerHTML=html;
@@ -2580,8 +2583,8 @@
             const N = 50;
             const dropCounts = new Array(N).fill(0);
             function getCfg(flow){
-                if(flow<5)  return {color:'rgba(200,175,50,0.78)', dur:2.2, h:13, w:2,   n:8};
-                if(flow>10) return {color:'rgba(195,55,55,0.82)',  dur:0.55,h:16, w:2.5, n:20};
+                if(flow<0.45)  return {color:'rgba(200,175,50,0.78)', dur:2.2, h:13, w:2,   n:8};
+                if(flow>4.8) return {color:'rgba(195,55,55,0.82)',  dur:0.55,h:16, w:2.5, n:20};
                 return            {color:'rgba(55,130,210,0.80)',  dur:1.2, h:14, w:2,   n:13};
             }
             function startRain(idx,flow){
