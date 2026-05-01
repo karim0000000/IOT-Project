@@ -52,7 +52,7 @@
         table { table-layout: fixed; width: 100%; border-collapse: collapse; }
         thead { display: table-header-group; }
         tbody { display: table-row-group; }
-        #login-page { background: linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('https://scontent.fcai11-1.fna.fbcdn.net/v/t39.30808-6/469089298_10163464705426323_1876441644809304357_n.jpg') no-repeat center center fixed; background-size: cover; }
+        #login-page { background: linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('ph1.jpg') no-repeat center center fixed; background-size: cover; }
         #welcome-page { background: linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)), url('https://www.vidaenlatierra.com/wp-content/uploads/2020/11/monocultivos-circulares.jpg') center/cover; }
         #dashboard-page { background-color: #f4f4f4; }
         body.dark-mode #login-page, body.dark-mode #welcome-page { background: linear-gradient(rgba(0,0,0,0.7),rgba(0,0,0,0.7)), url('Ph3.png') no-repeat center center !important; background-size: cover !important; background-attachment: scroll !important; }
@@ -281,7 +281,82 @@
             85% {opacity:0.7;}
             100%{transform:translateY(var(--box-h,70px));opacity:0;}
         }
-        #login-page, #welcome-page, #dashboard-page { display: none; }
+        #login-page, #welcome-page, #dashboard-page, #reset-password-page { display: none; }
+
+        /* ===================== صفحة إعادة تعيين كلمة السر ===================== */
+        #reset-password-page {
+            background: linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)), url('ph1.jpg') no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
+            align-items: center;
+            justify-content: center;
+        }
+        .reset-card {
+            background: rgba(255,255,255,0.93);
+            padding: 36px 30px 28px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            direction: rtl;
+            animation: slideUp 0.3s ease;
+        }
+        .reset-card .reset-icon {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+        }
+        .reset-card h2 {
+            margin: 4px 0 6px;
+            color: #2c3e50;
+            font-size: 1.3em;
+        }
+        .reset-email-label {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            display: block;
+        }
+        .reset-email-label strong {
+            color: #2980b9 !important;
+        }
+        .reset-card input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #dfe4ea;
+            border-radius: 10px;
+            font-size: 1em;
+            box-sizing: border-box;
+            margin-bottom: 12px;
+            text-align: right;
+            direction: rtl;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .reset-card input[type="password"]:focus {
+            outline: none;
+            border-color: #27ae60;
+            box-shadow: 0 0 0 3px rgba(39,174,96,0.15);
+        }
+        .btn-reset-submit {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 4px 12px rgba(39,174,96,0.35);
+            margin-top: 4px;
+        }
+        .btn-reset-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(39,174,96,0.5);
+        }
+        .btn-reset-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
 
         #welcome-page {
             position: relative;
@@ -441,7 +516,7 @@
             <button type="button" class="close-x" id="forgotCloseBtn" aria-label="إغلاق">×</button>
             <div class="forgot-icon">🔒</div>
             <h3>استعادة كلمة السر</h3>
-            <p class="subtitle">اكتب بريدك الإلكتروني وهنبعتلك لينك على الإيميل تقدر من خلاله تعيين كلمة سر جديدة.</p>
+            <p class="subtitle">من فضلك اكتب بريدك الإلكتروني</p>
             <input type="email" id="forgotEmail" placeholder="البريد الإلكتروني" autocomplete="email">
             <button type="button" class="btn-send" id="forgotSendBtn">إرسال رابط الاستعادة</button>
             <div class="forgot-msg" id="forgotMsg"></div>
@@ -588,7 +663,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push, get, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, confirmPasswordReset, verifyPasswordResetCode } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // ===================== إعدادات عدد الرشاشات =====================
         const SPRINKLER_COUNT = 50;
@@ -981,7 +1056,18 @@
                 console.error('خطأ في استعادة الجلسة:', e);
             }
         }
-
+        // ===================== العين لكشف كلمة السر=====================
+                     document.getElementById('togglePwd').addEventListener('click', function() {
+                     const passwordInput = document.getElementById('password');
+                      // التبديل بين نوع password و text
+                      if (passwordInput.type === 'password') {
+                      passwordInput.type = 'text';
+                     this.textContent = '🔒'; // تغيير الشكل للقفل عند الإظهار
+                      } else {
+                     passwordInput.type = 'password';
+                     this.textContent = '👁'; // العودة لشكل العين عند الإخفاء
+ }
+});
         // ===================== وضع الليل =====================
         const themeToggle = document.getElementById('themeToggle');
         const themeText = document.getElementById('themeText');
@@ -1135,9 +1221,13 @@
                 forgotSendBtn.disabled = true;
                 forgotSendBtn.innerHTML = 'جاري الإرسال<span class="spinner-mini"></span>';
 
-                sendPasswordResetEmail(auth, email)
+                const resetActionSettings = {
+                    url: 'https://github.com/IoT-Irrigation-Project2026',
+                    handleCodeInApp: false
+                };
+                sendPasswordResetEmail(auth, email, resetActionSettings)
                     .then(() => {
-                        showForgotMsg('✅ تم إرسال رابط إستعادة كلمة السر إلى بريدك الإلكتروني، إذا لم تجدهابحث عنه في الSpam', 'success');
+                        showForgotMsg('✅ تم إرسال رابط استعادة كلمة السر إلى بريدك. لو ما لقيتش الإيميل، شوف في صندوق الـ Spam.', 'success');
                         forgotSendBtn.disabled = false;
                         forgotSendBtn.innerHTML = 'إرسال مرة أخرى';
                     })
@@ -1152,6 +1242,76 @@
                         forgotSendBtn.disabled = false;
                         forgotSendBtn.innerHTML = 'إرسال رابط الاستعادة';
                     });
+            });
+        }
+
+        // ===================== معالجة رابط إعادة تعيين كلمة السر =====================
+        const __urlParams = new URLSearchParams(window.location.search);
+        const __resetMode = __urlParams.get('mode');
+        const __oobCode = __urlParams.get('oobCode');
+        const __isResetMode = (__resetMode === 'resetPassword' && !!__oobCode);
+
+        if (__isResetMode) {
+            // أخفي صفحة الدخول وأظهر صفحة إعادة التعيين فوراً
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('reset-password-page').style.display = 'flex';
+
+            // تحقق من صلاحية الكود أولاً
+            verifyPasswordResetCode(auth, __oobCode)
+                .then((email) => {
+                    document.getElementById('resetEmailDisplay').textContent = email;
+                })
+                .catch(() => {
+                    document.getElementById('resetFormArea').style.display = 'none';
+                    const msg = document.getElementById('resetMsg');
+                    msg.innerHTML = '⚠️ الرابط منتهي الصلاحية أو مستخدم من قبل.<br>ارجع واطلب رابطاً جديداً.';
+                    msg.className = 'forgot-msg error';
+                    msg.style.display = 'block';
+                });
+
+            document.getElementById('resetSubmitBtn').addEventListener('click', async () => {
+                const p1 = document.getElementById('newPass1').value;
+                const p2 = document.getElementById('newPass2').value;
+                const msg = document.getElementById('resetMsg');
+                msg.style.display = 'none';
+
+                if (p1.length < 6) {
+                    msg.textContent = '⚠️ كلمة السر لازم تكون 6 حروف على الأقل.';
+                    msg.className = 'forgot-msg error';
+                    msg.style.display = 'block';
+                    return;
+                }
+                if (p1 !== p2) {
+                    msg.textContent = '⚠️ كلمتا السر غير متطابقتين.';
+                    msg.className = 'forgot-msg error';
+                    msg.style.display = 'block';
+                    return;
+                }
+
+                const btn = document.getElementById('resetSubmitBtn');
+                btn.disabled = true;
+                btn.innerHTML = 'جاري الحفظ<span class="spinner-mini"></span>';
+
+                try {
+                    await confirmPasswordReset(auth, __oobCode, p1);
+                    msg.innerHTML = '✅ تم تغيير كلمة السر بنجاح!<br>سيتم توجيهك لصفحة الدخول خلال ثوانٍ...';
+                    msg.className = 'forgot-msg success';
+                    msg.style.display = 'block';
+                    document.getElementById('resetFormArea').style.display = 'none';
+                    setTimeout(() => {
+                        window.location.href = window.location.origin + window.location.pathname;
+                    }, 2500);
+                } catch (e) {
+                    let errMsg = 'حدث خطأ. حاول مرة أخرى.';
+                    if (e.code === 'auth/expired-action-code') errMsg = 'الرابط منتهي الصلاحية. اطلب رابطاً جديداً.';
+                    else if (e.code === 'auth/invalid-action-code') errMsg = 'الرابط غير صالح أو مستخدم من قبل.';
+                    else if (e.code === 'auth/weak-password') errMsg = 'كلمة السر ضعيفة جداً. استخدم 6 حروف على الأقل.';
+                    msg.textContent = '⚠️ ' + errMsg;
+                    msg.className = 'forgot-msg error';
+                    msg.style.display = 'block';
+                    btn.disabled = false;
+                    btn.innerHTML = 'تأكيد كلمة السر الجديدة';
+                }
             });
         }
 
@@ -1189,6 +1349,8 @@
             const loginPage = document.getElementById('login-page');
             const welcomePage = document.getElementById('welcome-page');
             const dashboardPage = document.getElementById('dashboard-page');
+
+            if (__isResetMode) return; // في وضع إعادة التعيين، لا تغيّر شيئاً
 
             if (loginPage) loginPage.style.display = 'none';
             if (welcomePage) welcomePage.style.display = 'none';
@@ -1916,7 +2078,7 @@
                 const ENGINEERS = "م/كريم عمرو—م/نادر رامز—م/أمنية علاء—م/نجوى وجيه—م/فاطمة علي—م/الشيماء جمال—م/أحمد ياسر—م/أحمد باسم—م/أمين حجاج—م/سيف الدين حسين";
 
                 // ====== جلب شعار الجامعة (Logo2) من GitHub عبر Canvas (CORS-safe) ======
-                let logoSrc = 'https://raw.githubusercontent.com/karim0000000/IOT-Project/main/Logo2.png';
+                let logoSrc = 'https://github.com/IoT-Irrigation-Project2026';
                 let logoPngBuffer = null;
                 try {
                     // نحوّل الصورة عبر Canvas لتجنب مشاكل CORS
@@ -2460,6 +2622,21 @@
             },1200);
         })();
     </script>
+
+    <!-- ===================== صفحة إعادة تعيين كلمة السر ===================== -->
+    <div id="reset-password-page">
+        <div class="reset-card">
+            <div class="reset-icon">🔐</div>
+            <h2>تعيين كلمة سر جديدة</h2>
+            <span class="reset-email-label">الحساب: <strong id="resetEmailDisplay">...</strong></span>
+            <div id="resetFormArea">
+                <input type="password" id="newPass1" placeholder="كلمة السر الجديدة">
+                <input type="password" id="newPass2" placeholder="تأكيد كلمة السر">
+                <button id="resetSubmitBtn" class="btn-reset-submit">✔ تأكيد كلمة السر الجديدة</button>
+            </div>
+            <div class="forgot-msg" id="resetMsg"></div>
+        </div>
+    </div>
 
 </body>
 </html>
