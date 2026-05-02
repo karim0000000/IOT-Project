@@ -838,6 +838,36 @@
         // --- متغيرات لمتابعة آخر قيم للمنحنى ---
         let lastChartFlows = null;
 
+        // --- Debounce المنحنى: دمج تحديثات الرشاشات في نقطة واحدة ---
+        let _chartDebounceTimer = null;
+        let _pendingChartFlows = null;
+        let _pendingChartTimestamp = 0;
+        let _pendingChartAnyOn = false;
+        let _pendingChartIsWateringPrev = true;
+        let _lastChartUpdateTime = 0;   // توقيت آخر نقطة أُضيفت للمنحنى (ms)
+        // آخر قيمة موثوقة لكل رشاش (لمنع Zero Spikes)
+        let _lastKnownFlows = new Array(50).fill(0);
+        // آخر timestamp مسجل لكل رشاش (لمعرفة لو الرشاش بعت بيانات جديدة فعلاً)
+        let _lastSprinklerTimestamps = new Array(50).fill(null);
+        // خريطة: timeStr (نص) → index في labels — لمنع التكرار 100%
+        let _chartLabelMap = new Map();
+        // دالة توحيد تنسيق الوقت: تُستخدم في كل مكان لضمان نفس الـ string بالضبط
+        function _fmtTime(ts) {
+            return new Date(ts).toLocaleTimeString('en-US', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: true, timeZone: 'Africa/Cairo'
+            });
+        }
+        // دالة إعادة بناء الـ Map من مصفوفة labels موجودة (بعد تحميل Firebase)
+        function _rebuildChartMap(labels) {
+            _chartLabelMap.clear();
+            labels.forEach((lbl, idx) => {
+                // شيل أي رموز قديمة وتنظيف النص
+                const clean = String(lbl).replace('▶','').replace('⏹','').replace('(توقف)','').trim();
+                if (clean && !_chartLabelMap.has(clean)) _chartLabelMap.set(clean, idx);
+            });
+        }
+
         // ====== fullChartData: يحفظ كل نقاط المنحنى بدون حد (للتصدير الكامل) ======
         let fullChartData = {
             labels: [],
@@ -1412,16 +1442,42 @@
                     return ts;
                 });
 
+                // ====== منطق effectiveFlows: منع Zero Spikes ======
+                // لو رشاش لم يُحدَّث في هذا الحدث، افضل بآخر قيمة موثوقة.
+                // نعتبر الرشاش "أُحدِّث" لو timestamp اتغير أو لو قيمة التصرف اتغيرت فعلاً.
+                const effectiveFlows = flows.map((v, i) => {
+                    const tsChanged = timestamps[i] !== null &&
+                        timestamps[i] !== _lastSprinklerTimestamps[i];
+                    // FIX 1: اكتشاف تغيير التصرف حتى لو الـ timestamp لم يتغير
+                    const flowChanged = Math.abs(v - _lastKnownFlows[i]) > 0.01;
+                    if (tsChanged || flowChanged) {
+                        // الرشاش بعت بيانات جديدة أو تغير تصرفه
+                        if (tsChanged && timestamps[i] !== null) {
+                            _lastSprinklerTimestamps[i] = timestamps[i];
+                        }
+                        if (v > 0.001) {
+                            _lastKnownFlows[i] = v;   // حفظ القيمة الجديدة
+                            return v;
+                        } else {
+                            _lastKnownFlows[i] = 0;   // توقف فعلي من Firebase
+                            return 0;
+                        }
+                    } else {
+                        // الرشاش لم يُحدَّث → افضل بآخر قيمة معروفة
+                        return _lastKnownFlows[i];
+                    }
+                });
+
                 const _fbFallback = lastFirebaseTime || (Date.now()+(window._serverOffset||0));
                 const firebaseNow = timestamps.reduce((best, ts) => (ts && ts > best) ? ts : best, _fbFallback);
                 lastFirebaseTime = firebaseNow;
 
-                window._lastFlows = flows;
-                const anyOn = flows.some(v => v > 0.1);
+                window._lastFlows = effectiveFlows;
+                const anyOn = effectiveFlows.some(v => v > 0.1);
                 if (anyOn) lastActiveFirebaseTime = firebaseNow;
 
                 const flowChanged = !lastChartFlows ||
-                    flows.some((v, i) => Math.abs(v - (lastChartFlows[i] || 0)) > 0.001);
+                    effectiveFlows.some((v, i) => Math.abs(v - (lastChartFlows[i] || 0)) > 0.001);
 
                 const isWatering_prev = isWatering;
                 const statusEl = document.getElementById('mainStatus');
@@ -1430,6 +1486,20 @@
                     isWatering = true;
                     localStorage.setItem('isWatering','true');
                     if (statusEl) statusEl.innerText = "🟢 النظام يعمل الآن";
+
+                    // نقطة صفر مشتركة لكل الرشاشات عند بداية الري
+                    if (myChart && !_chartLabelMap.has('__START__')) {
+                        const realStartTs = timestamps.reduce((best, ts) => (ts && ts > best) ? ts : best, 0);
+                        const zeroStr = realStartTs > 0 ? _fmtTime(realStartTs - 1000) : '0';
+                        const zIdx = myChart.data.labels.length;
+                        myChart.data.labels.push(zeroStr);
+                        myChart.data.datasets.forEach(ds => ds.data.push(0));
+                        _chartLabelMap.set('__START__', zIdx);
+                        _chartLabelMap.set(zeroStr + '_start0', zIdx);
+                        if (fullChartDataLoaded) { fullChartData.labels.push(zeroStr); fullChartData.datasets.forEach(d => d.push(0)); }
+                        myChart.update('none');
+                    }
+
                     flows.forEach((v, i) => {
                         if (v > 0.1 && !sessionData.rawStartTimes[i]) {
                             const ts = timestamps[i] || firebaseNow;
@@ -1445,6 +1515,23 @@
                     isWatering = false;
                     localStorage.setItem('isWatering','false');
                     if (statusEl) statusEl.innerText = "🔴 النظام متوقف حالياً";
+
+                    // نقطة صفر مشتركة لكل الرشاشات عند نهاية الري
+                    if (myChart && lastActiveFirebaseTime > 0 && !_chartLabelMap.has('__STOP__')) {
+                        const endStr = _fmtTime(lastActiveFirebaseTime);
+                        const sIdx = myChart.data.labels.length;
+                        myChart.data.labels.push(endStr);
+                        myChart.data.datasets.forEach(ds => ds.data.push(0));
+                        _chartLabelMap.set('__STOP__', sIdx);
+                        _chartLabelMap.set(endStr + '_stop', sIdx);
+                        if (fullChartDataLoaded) { fullChartData.labels.push(endStr); fullChartData.datasets.forEach(d => d.push(0)); }
+                        myChart.update('none');
+                            // حفظ فوري في Firebase
+                            const _s = { labels: myChart.data.labels, isWatering: false, sprinklerCount: SPRINKLER_COUNT };
+                            for (let _i = 0; _i < SPRINKLER_COUNT; _i++) _s['f'+(_i+1)] = myChart.data.datasets[_i]?.data || [];
+                            set(ref(db, 'chart_data'), _s).catch(() => {});
+                        }
+                    }
 
                     const stopTime = lastActiveFirebaseTime > 0 ? lastActiveFirebaseTime : firebaseNow;
                     localStorage.setItem('lastStoppedTime', String(stopTime));
@@ -1504,70 +1591,162 @@
                     saveActiveSession();
                 }
 
-                // ===================== تحديث المنحنى (50 خط) =====================
+                // ===================== تحديث المنحنى — Debounce 600ms + String-Key Map =====================
+                // المبدأ:
+                //   DEBOUNCE 600ms: كل حدث Firebase يُعيد ضبط المؤقت.
+                //   بعد 600ms من آخر حدث → flush واحد يجمع كل التغييرات.
+                //   نقطة جديدة تُضاف فقط لو التصرف اتغير فعلاً (لا keepalive).
+                //   المفتاح في الـ Map هو timeStr (نص) → يعمل بعد reload الصفحة.
+
                 const fbTimestamp = timestamps.reduce((best, ts) => (ts && ts > best) ? ts : best, 0);
-                if (myChart && flowChanged && fbTimestamp > 0) {
-                    const timeStr = new Date(fbTimestamp).toLocaleTimeString('en-US', {
-                        hour: '2-digit', minute: '2-digit', second: '2-digit',
-                        hour12: true, timeZone: 'Africa/Cairo'
-                    });
+                if (myChart && fbTimestamp > 0) {
+                    // تقريب لأقرب 30 ثانية لتجميع أحداث نفس الـ batch في bucket واحد
+                    const bucketTs = Math.round(fbTimestamp / 30000) * 30000;
 
-                    if (anyOn && !isWatering_prev) { myChart.data.labels.push(timeStr+' ▶'); myChart.data.datasets.forEach(ds=>ds.data.push(0)); }
-
-                    if (anyOn) {
-                        myChart.data.labels.push(timeStr);
-                        flows.forEach((v, i) => {
-                            if (myChart.data.datasets[i]) myChart.data.datasets[i].data.push(v);
+                    // تحديث الـ pending دائماً (debounce يستوعب كل الأحداث)
+                    if (!_pendingChartFlows) {
+                        _pendingChartFlows = [...effectiveFlows];
+                        _pendingChartIsWateringPrev = isWatering_prev; // حالة الري قبل هذه الدفعة
+                    } else {
+                        effectiveFlows.forEach((v, i) => {
+                            // حدّث دائماً بآخر قيمة (ارتفعت أو نزلت)
+                            _pendingChartFlows[i] = v;
                         });
-                    } else if (!anyOn && isWatering_prev) { myChart.data.labels.push(timeStr+' ⏹'); myChart.data.datasets.forEach(ds=>ds.data.push(0)); }
-
-                    // ====== Mirror to fullChartData (بدون حد للتصدير) - فقط بعد اكتمال التحميل ======
-                    if (fullChartDataLoaded) {
-                        if (anyOn && !isWatering_prev) {
-                            fullChartData.labels.push(timeStr+' ▶');
-                            fullChartData.datasets.forEach(d => d.push(0));
-                        }
-                        if (anyOn) {
-                            fullChartData.labels.push(timeStr);
-                            flows.forEach((v, i) => { fullChartData.datasets[i].push(v); });
-                        } else if (!anyOn && isWatering_prev) {
-                            fullChartData.labels.push(timeStr+' ⏹');
-                            fullChartData.datasets.forEach(d => d.push(0));
-                        }
                     }
+                    _pendingChartTimestamp = bucketTs;
+                    _pendingChartAnyOn = anyOn;  // آخر حالة فعلية (مش OR ثابتة)
 
-                    while (myChart.data.labels.length > 60) {
-                        myChart.data.labels.shift();
-                        myChart.data.datasets.forEach(ds => ds.data.shift());
-                    }
+                    // إعادة ضبط الـ debounce timer
+                    if (_chartDebounceTimer !== null) clearTimeout(_chartDebounceTimer);
 
-                    myChart.update('none');
+                    _chartDebounceTimer = setTimeout(() => {
+                            _chartDebounceTimer = null;
+                            const pFlows   = _pendingChartFlows;
+                            const pTs      = _pendingChartTimestamp;
+                            const pAnyOn   = _pendingChartAnyOn;
+                            const pWasPrev = _pendingChartIsWateringPrev;
 
-                    // ========= حفظ بيانات المنحنى في Firebase (f1..f50) =========
-                    const chartDataToSave = {
-                        labels: myChart.data.labels,
-                        isWatering: isWatering,
-                        sprinklerCount: SPRINKLER_COUNT
-                    };
-                    for (let i = 0; i < SPRINKLER_COUNT; i++) {
-                        chartDataToSave['f' + (i+1)] = myChart.data.datasets[i] ? myChart.data.datasets[i].data : [];
-                    }
-                    set(ref(db, 'chart_data'), chartDataToSave).catch(err => console.error("خطأ حفظ المنحنى:", err));
+                            _pendingChartFlows = null;
+                            _pendingChartAnyOn = false;
 
-                    // ====== حفظ full_chart_data في Firebase (فقط بعد اكتمال التحميل) ======
-                    if (fullChartDataLoaded) {
-                        const fullDataToSave = {
-                            labels: fullChartData.labels,
-                            isWatering: isWatering,
-                            sprinklerCount: SPRINKLER_COUNT
-                        };
-                        for (let i = 0; i < SPRINKLER_COUNT; i++) {
-                            fullDataToSave['f' + (i+1)] = fullChartData.datasets[i];
-                        }
-                        set(ref(db, 'full_chart_data'), fullDataToSave).catch(err => {});
-                    }
+                            if (!myChart || !pFlows || pTs <= 0) return;
 
-                    lastChartFlows = [...flows];
+                            // نقطة جديدة فقط لو التصرف اتغير فعلاً — بدون keepalive
+                            const pFlowChanged = !lastChartFlows ||
+                                pFlows.some((v, i) => Math.abs(v - (lastChartFlows[i] || 0)) > 0.001);
+                            if (!pFlowChanged) return;
+
+                            // timeStr = المفتاح الفريد (string يُحفظ في Firebase ويُقرأ منه)
+                            const timeStr = _fmtTime(pTs);
+
+                            // ======= بحث في الـ Map بالـ string =======
+                            const existIdx = _chartLabelMap.has(timeStr) ? _chartLabelMap.get(timeStr) : -1;
+
+                            if (existIdx >= 0) {
+                                // نفس الثانية موجودة → حدّث in-place (مفيش label جديد)
+                                myChart.data.datasets.forEach((ds, i) => {
+                                    if (ds.data[existIdx] !== undefined) ds.data[existIdx] = pFlows[i];
+                                });
+                                if (fullChartDataLoaded) {
+                                    fullChartData.datasets.forEach((d, i) => {
+                                        if (d[existIdx] !== undefined) d[existIdx] = pFlows[i];
+                                    });
+                                }
+                            } else {
+                                if (pAnyOn && !pWasPrev) {
+                                    // ===== بداية الري =====
+                                    // 1) نقطة صفر مشتركة لكل الرشاشات (لو لم تُضَف بعد)
+                                    if (!_chartLabelMap.has('__START__')) {
+                                        const zeroStr = _fmtTime(pTs - 1000);
+                                        const zIdx = myChart.data.labels.length;
+                                        myChart.data.labels.push(zeroStr);
+                                        myChart.data.datasets.forEach(ds => ds.data.push(0));
+                                        _chartLabelMap.set('__START__', zIdx);
+                                        _chartLabelMap.set(zeroStr + '_start0', zIdx);
+                                        if (fullChartDataLoaded) {
+                                            fullChartData.labels.push(zeroStr);
+                                            fullChartData.datasets.forEach(d => d.push(0));
+                                        }
+                                    }
+                                    // 2) نقطة البيانات الحقيقية مباشرة بعدها
+                                    const newIdx = myChart.data.labels.length;
+                                    myChart.data.labels.push(timeStr);
+                                    myChart.data.datasets.forEach((ds, i) => ds.data.push(pFlows[i]));
+                                    _chartLabelMap.set(timeStr, newIdx);
+                                    if (fullChartDataLoaded) { fullChartData.labels.push(timeStr); fullChartData.datasets.forEach((d, i) => d.push(pFlows[i])); }
+
+                                } else if (pAnyOn) {
+                                    // ===== أثناء الري: خط رأسي عند التغيير =====
+                                    // نضيف نقطة بنفس الـ timeStr بالقيمة القديمة ثم نقطة بالقيمة الجديدة
+                                    // النتيجة: خط أفقي ← ثم خط رأسي حقيقي ← ثم خط أفقي
+                                    if (lastChartFlows) {
+                                        const preKey = timeStr + '_pre';
+                                        if (!_chartLabelMap.has(preKey)) {
+                                            const preIdx = myChart.data.labels.length;
+                                            myChart.data.labels.push(timeStr);
+                                            myChart.data.datasets.forEach((ds, i) => ds.data.push(lastChartFlows[i] || 0));
+                                            _chartLabelMap.set(preKey, preIdx);
+                                            if (fullChartDataLoaded) { fullChartData.labels.push(timeStr); fullChartData.datasets.forEach((d, i) => d.push(lastChartFlows[i] || 0)); }
+                                        }
+                                    }
+                                    const newIdx = myChart.data.labels.length;
+                                    myChart.data.labels.push(timeStr);
+                                    myChart.data.datasets.forEach((ds, i) => ds.data.push(pFlows[i]));
+                                    _chartLabelMap.set(timeStr, newIdx);
+                                    if (fullChartDataLoaded) { fullChartData.labels.push(timeStr); fullChartData.datasets.forEach((d, i) => d.push(pFlows[i])); }
+
+                                } else if (!pAnyOn && pWasPrev) {
+                                    // ===== نهاية الري: نقطة صفر مشتركة لكل الرشاشات =====
+                                    if (!_chartLabelMap.has('__STOP__')) {
+                                        const sIdx = myChart.data.labels.length;
+                                        myChart.data.labels.push(timeStr);
+                                        myChart.data.datasets.forEach(ds => ds.data.push(0));
+                                        _chartLabelMap.set('__STOP__', sIdx);
+                                        _chartLabelMap.set(timeStr + '_stop', sIdx);
+                                        if (fullChartDataLoaded) {
+                                            fullChartData.labels.push(timeStr);
+                                            fullChartData.datasets.forEach(d => d.push(0));
+                                        }
+                                    }
+                                }
+                            }
+
+                            // حد 100 نقطة مع إعادة بناء الـ Map بعد الحذف
+                            while (myChart.data.labels.length > 100) {
+                                myChart.data.labels.shift();
+                                myChart.data.datasets.forEach(ds => ds.data.shift());
+                            }
+                            _rebuildChartMap(myChart.data.labels);
+
+                            myChart.update('none');
+
+                            // حفظ في Firebase
+                            const chartDataToSave = {
+                                labels: myChart.data.labels,
+                                isWatering: isWatering,
+                                sprinklerCount: SPRINKLER_COUNT
+                            };
+                            for (let i = 0; i < SPRINKLER_COUNT; i++) {
+                                chartDataToSave['f' + (i+1)] = myChart.data.datasets[i] ? myChart.data.datasets[i].data : [];
+                            }
+                            set(ref(db, 'chart_data'), chartDataToSave).catch(err => console.error('خطأ حفظ المنحنى:', err));
+
+                            if (fullChartDataLoaded) {
+                                const fullDataToSave = {
+                                    labels: fullChartData.labels,
+                                    isWatering: isWatering,
+                                    sprinklerCount: SPRINKLER_COUNT
+                                };
+                                for (let i = 0; i < SPRINKLER_COUNT; i++) {
+                                    fullDataToSave['f' + (i+1)] = fullChartData.datasets[i];
+                                }
+                                set(ref(db, 'full_chart_data'), fullDataToSave).catch(err => {});
+                            }
+
+                            lastChartFlows = [...pFlows];
+                            _lastChartUpdateTime = pTs;
+                        }, 600);
+
                 }
 
                 updateErrorLogs(flows, anyOn);
@@ -1848,12 +2027,13 @@
                 datasets.push({
                     label: 'F' + (i+1),
                     borderColor: palette[i],
-                    backgroundColor: palette[i],
+                    backgroundColor: 'transparent',
                     data: [],
-                    tension: 0.4,
+                    tension: 0,
                     fill: false,
-                    pointRadius: 0,
-                    borderWidth: 2
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                    borderWidth: 2.5
                 });
             }
 
@@ -1866,7 +2046,16 @@
                     animation: false,
                     scales: {
                         y: { beginAtZero: true, grid: { color: '#ddd' }, ticks: { color: '#666' } },
-                        x: { grid: { color: '#ddd' }, ticks: { color: '#666' } }
+                        x: {
+                            grid: { color: '#ddd' },
+                            ticks: {
+                                color: '#666',
+                                autoSkip: true,
+                                maxTicksLimit: 10,
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        }
                     },
                     interaction: {
                         mode: 'nearest',
@@ -1916,20 +2105,30 @@
                 }
                 const wasWatering = cd.isWatering === true;
 
+                // نقطة الصفر في البداية: لو أول نقطة في البيانات مش صفر، حط صفر قبلها
+                if (savedLabels.length > 0 && datasetsData.some(data => data.length > 0 && data[0] > 0)) {
+                    savedLabels.unshift(savedLabels[0]);
+                    datasetsData.forEach(data => data.unshift(0));
+                }
+
+                // نقطة الصفر في النهاية: لو الري وقف والآخر نقطة مش صفر، حط صفر في الآخر
                 if (!wasWatering && datasetsData.some(data => data.length > 0 && data[data.length - 1] > 0)) {
-                    if (lastFirebaseTime > 0) {
-                        const nowStr = new Date(lastFirebaseTime).toLocaleTimeString('en-US', {
-                            hour: '2-digit', minute: '2-digit', second: '2-digit',
-                            hour12: true, timeZone: 'Africa/Cairo'
-                        });
-                        savedLabels.push(nowStr + " (توقف)");
-                        datasetsData.forEach(data => data.push(0));
-                    }
+                    const zeroTs = lastFirebaseTime > 0 ? lastFirebaseTime : (Date.now() + (window._serverOffset || 0));
+                    savedLabels.push(_fmtTime(zeroTs));
+                    datasetsData.forEach(data => data.push(0));
                 }
 
                 if (myChart) {
                     myChart.data.labels = savedLabels;
                     myChart.data.datasets.forEach((ds, i) => { ds.data = datasetsData[i] || []; });
+                    // أعد بناء الـ Map
+                    _rebuildChartMap(savedLabels);
+                    // *** ابدأ lastChartFlows من آخر قيم محفوظة ***
+                    // هذا يمنع الـ debounce الأول من إضافة نقطة مكررة
+                    // وبينضمن إن أي تغيير حقيقي في التصرف يتم اكتشافه فوراً
+                    if (datasetsData.length > 0 && datasetsData[0].length > 0) {
+                        lastChartFlows = datasetsData.map(d => (d.length > 0 ? (d[d.length - 1] || 0) : 0));
+                    }
                     myChart.update('none');
                 }
             }).catch(err => console.error("خطأ تحميل بيانات المنحنى:", err));
@@ -1950,7 +2149,13 @@
             });
         };
 
-        window.initChart = window.initChart;
+        // عند إعادة تهيئة المنحنى، نمسح مفاتيح البداية والنهاية المشتركة
+        const _origInitChart = window.initChart;
+        window.initChart = function() {
+            _chartLabelMap.delete('__START__');
+            _chartLabelMap.delete('__STOP__');
+            _origInitChart();
+        };
 
         // ===================== بناء صورة المنحنى الكامل للتصدير =====================
         function buildFullChartImage() {
@@ -1984,7 +2189,7 @@
                     data: fullChartData.datasets[i] && fullChartData.datasets[i].length > 0
                         ? [...fullChartData.datasets[i]]
                         : (myChart && myChart.data.datasets[i] ? [...myChart.data.datasets[i].data] : []),
-                    tension: 0.4,
+                    tension: 0,
                     fill: false,
                     pointRadius: 0,
                     borderWidth: 3
