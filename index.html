@@ -2053,6 +2053,10 @@
         }
         window.buildFullChartImage = buildFullChartImage;
 
+        // ====== تحميل اللوجو مسبقاً عند بدء الصفحة (يشتغل على file:// وعلى السيرفر) ======
+        const _preloadedLogoImg = new Image();
+        _preloadedLogoImg.src = 'Logo2.png';
+
         // ===================== تصدير Excel + PDF + ZIP (50 رشاش) =====================
         window.exportToExcel = async function() {
             const isDarkMode = document.body.classList.contains('dark-mode');
@@ -2080,67 +2084,190 @@
                 // ====== أسماء المهندسين والمشرف ======
                 const ENGINEERS = "م/كريم عمرو—م/نادر رامز—م/أمنية علاء—م/نجوى وجيه—م/فاطمة علي—م/الشيماء جمال—م/أحمد ياسر—م/أحمد باسم—م/أمين حجاج—م/سيف الدين حسين";
 
-                // ====== تحميل شعار الجامعة الحقيقي — مع fallback رسم Canvas ======
+                // ====== تحميل اللوجو — يعتمد على الصورة المُحمَّلة مسبقاً عند بداية الصفحة ======
                 let logoSrc = null;
                 let logoPngBuffer = null;
-
-                // --- المحاولة الأولى: تحميل الصورة الحقيقية من GitHub ---
                 try {
-                    // *** ضع هنا الرابط الكامل للصورة على GitHub ***
-                    // مثال: https://raw.githubusercontent.com/username/repo/main/ain_shams_agri_logo.png
-                    const LOGO_URL = 'Logo2.png';
-                    const controller = new AbortController();
-                    const fetchTimeout = setTimeout(() => controller.abort(), 8000); // 8 ثواني حد أقصى للانتظار
-                    const resp = await fetch(LOGO_URL, { signal: controller.signal });
-                    clearTimeout(fetchTimeout);
-                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                    logoPngBuffer = await resp.arrayBuffer();
-                    console.log('Logo loaded from GitHub successfully');
+                    // انتظار اكتمال تحميل الصورة (إن لم تكن اتحملت بالفعل)
+                    await new Promise((resolve) => {
+                        if (_preloadedLogoImg.complete && _preloadedLogoImg.naturalWidth > 0) return resolve();
+                        _preloadedLogoImg.onload  = resolve;
+                        _preloadedLogoImg.onerror = resolve;
+                        setTimeout(resolve, 5000); // 5 ثواني حد أقصى
+                    });
+                    if (_preloadedLogoImg.naturalWidth === 0) throw new Error('Image not found or failed to load');
+                    // تحويل الصورة المُحمَّلة إلى ArrayBuffer عبر Canvas
+                    const logoCvs = document.createElement('canvas');
+                    logoCvs.width  = _preloadedLogoImg.naturalWidth;
+                    logoCvs.height = _preloadedLogoImg.naturalHeight;
+                    const logoCtx = logoCvs.getContext('2d');
+                    logoCtx.drawImage(_preloadedLogoImg, 0, 0);
+                    const pngBase64 = logoCvs.toDataURL('image/png');
+                    const b64 = pngBase64.split(',')[1];
+                    const bin = atob(b64);
+                    logoPngBuffer = new ArrayBuffer(bin.length);
+                    const view = new Uint8Array(logoPngBuffer);
+                    for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+                    console.log('Logo2.png loaded successfully');
                 } catch(e) {
-                    // --- Fallback: رسم شعار بديل بالـ Canvas لو الصورة ما اتحملتش ---
-                    console.log('Logo fetch failed (' + e.message + '), using canvas fallback');
+                    // Fallback: شعار مرسوم بالـ Canvas لو الصورة ما اتلقيتش
+                    
+                    console.log('Logo not found, using canvas fallback:', e.message);
                     try {
+                        // === شعار بديل محسّن (500×500) ===
                         const cvs = document.createElement('canvas');
-                        cvs.width = 400; cvs.height = 400;
+                        cvs.width = 500; cvs.height = 500;
                         const ctx = cvs.getContext('2d');
+                        const CX = 250, CY = 250;
+
+                        // خلفية بيضاء
                         ctx.fillStyle = '#fff';
-                        ctx.fillRect(0, 0, 400, 400);
+                        ctx.fillRect(0, 0, 500, 500);
+
+                        // الدائرة الخارجية السميكة
                         ctx.beginPath();
-                        ctx.arc(200, 200, 180, 0, Math.PI * 2);
-                        ctx.strokeStyle = '#000'; ctx.lineWidth = 5; ctx.stroke();
+                        ctx.arc(CX, CY, 238, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#0d0d0d'; ctx.lineWidth = 7; ctx.stroke();
+
+                        // الدائرة الداخلية (تاركة مساحة أكبر للنص الإنجليزي)
                         ctx.beginPath();
-                        ctx.arc(200, 200, 155, 0, Math.PI * 2);
-                        ctx.lineWidth = 2; ctx.stroke();
-                        ctx.fillStyle = '#2e8b57';
-                        function drawLeaf(x, y, angle) {
-                            ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
-                            ctx.beginPath(); ctx.moveTo(0, 0);
-                            ctx.bezierCurveTo(8, -10, 12, -18, 0, -28);
-                            ctx.bezierCurveTo(-12, -18, -8, -10, 0, 0);
-                            ctx.fill(); ctx.restore();
-                        }
-                        const leafCount = 48, leafRadius = 135;
-                        for (let i = 0; i < leafCount; i++) {
-                            const a = (i / leafCount) * Math.PI * 2;
-                            drawLeaf(200 + Math.cos(a) * leafRadius, 200 + Math.sin(a) * leafRadius, a);
-                        }
-                        ctx.fillStyle = '#555';
-                        ctx.beginPath(); ctx.moveTo(200, 90); ctx.lineTo(220, 200);
-                        ctx.lineTo(180, 200); ctx.closePath(); ctx.fill();
-                        ctx.textAlign = 'center';
-                        ctx.fillStyle = '#cc0000'; ctx.font = 'bold 28px Arial';
-                        ctx.fillText('كلية الزراعة', 200, 250);
-                        function drawCircularText(text, centerX, centerY, r, startAngle, direction = 1) {
-                            ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(startAngle);
-                            for (let i = 0; i < text.length; i++) {
-                                ctx.save(); ctx.rotate(direction * i * 0.07);
-                                ctx.fillText(text[i], 0, -r); ctx.restore();
-                            }
+                        ctx.arc(CX, CY, 182, 0, Math.PI * 2);
+                        ctx.lineWidth = 3; ctx.strokeStyle = '#0d0d0d'; ctx.stroke();
+
+                        // === نص دائري علوي: AIN SHAMS UNIVERSITY ===
+                        ctx.fillStyle = '#0d0d0d';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        const TOP_TEXT = "AIN SHAMS UNIVERSITY";
+                        const TOP_FROM = -2.72, TOP_TO = -0.42;
+                        const topStep = (TOP_TO - TOP_FROM) / TOP_TEXT.length;
+                        for (let i = 0; i < TOP_TEXT.length; i++) {
+                            const a = TOP_FROM + topStep * (i + 0.5);
+                            ctx.save();
+                            ctx.translate(CX + Math.cos(a) * 211, CY + Math.sin(a) * 211);
+                            ctx.rotate(a + Math.PI / 2);
+                            ctx.fillText(TOP_TEXT[i], 0, 0);
                             ctx.restore();
                         }
-                        ctx.fillStyle = '#000'; ctx.font = 'bold 18px Arial';
-                        drawCircularText("AIN SHAMS UNIVERSITY",  200, 200, 165, -Math.PI / 1.1,  1);
-                        drawCircularText("FACULTY OF AGRICULTURE", 200, 200, 165,  Math.PI / 1.1, -1);
+
+                        // === نص دائري سفلي: FACULTY OF AGRICULTURE ===
+                        const BOT_TEXT = "FACULTY OF AGRICULTURE";
+                        const BOT_FROM = 2.72, BOT_TO = 0.42;
+                        const botStep = (BOT_TO - BOT_FROM) / BOT_TEXT.length;
+                        for (let i = 0; i < BOT_TEXT.length; i++) {
+                            const a = BOT_FROM + botStep * (i + 0.5);
+                            ctx.save();
+                            ctx.translate(CX + Math.cos(a) * 211, CY + Math.sin(a) * 211);
+                            ctx.rotate(a - Math.PI / 2);
+                            ctx.fillText(BOT_TEXT[i], 0, 0);
+                            ctx.restore();
+                        }
+
+                        // === إكليل أوراق الغار المطور - مع غصن القاعدة المتصل ===
+const N_LEAVES = 17; 
+const STEM_R = 155;  
+
+/**
+ * دالة رسم ورقة شجر متغيرة الحجم والشكل
+ */
+function drawDetailedLeaf(angle, index, side) {
+    const progress = index / (N_LEAVES - 1); 
+    const sx = CX + Math.cos(angle) * STEM_R;
+    const sy = CY + Math.sin(angle) * STEM_R;
+
+    // الحجم: يبدأ كبير جداً عند القاعدة (1.3) ليظهر الاتصال، وينتهي صغير (0.4)
+    const scale = 1.3 - (progress * 0.9);
+    const leafLen = 38 * scale;
+    const leafWidth = 15 * scale;
+
+    ctx.save();
+    ctx.translate(sx, sy);
+    
+    // ضبط زاوية الميلان: الأوراق السفلية تميل للأفقية أكثر لتعطي شكل القاعدة العريضة
+    const leanFactor = 0.4 - (progress * 0.2); 
+    const rotationAngle = (side === 'L') ? angle + Math.PI + leanFactor : angle - leanFactor;
+    
+    ctx.rotate(rotationAngle);
+
+    ctx.fillStyle = '#2d8a3c';
+    ctx.strokeStyle = '#1a5e26';
+    ctx.lineWidth = 0.6;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(leafWidth, -leafLen * 0.3, leafWidth * 0.8, -leafLen * 0.9, 0, -leafLen);
+    ctx.bezierCurveTo(-leafWidth * 0.8, -leafLen * 0.9, -leafWidth, -leafLen * 0.3, 0, 0);
+    ctx.fill();
+    ctx.stroke();
+
+    // العرق الأوسط
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -leafLen * 0.7);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+/**
+ * دالة رسم غصن الربط السفلي (القاعدة المركزية)
+ */
+function drawBaseConnector() {
+    ctx.save();
+    ctx.strokeStyle = '#1a5e26';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    
+    // رسم قوس صغير يربط بداية الفرعين تحت
+    const startAngle = 85 * Math.PI / 180;
+    const endAngle = 95 * Math.PI / 180;
+    ctx.arc(CX, CY, STEM_R, startAngle, endAngle, false);
+    ctx.stroke();
+    
+    // إضافة "برعم" أو ورقة مركزية صغيرة جداً في المنتصف تماماً لتعزيز الاتصال
+    drawDetailedLeaf(90 * Math.PI / 180, 0, 'L'); 
+    ctx.restore();
+}
+
+// 1. رسم غصن الربط أولاً ليكون تحت الأوراق
+drawBaseConnector();
+
+// 2. رسم الغصن الأيسر (تبدأ من زاوية 90 لتلتقي مع اليمين)
+const L_START = 92 * Math.PI / 180;
+const L_END   = 250 * Math.PI / 180;
+
+for (let i = 0; i < N_LEAVES; i++) {
+    const currentAngle = L_START + (L_END - L_START) * (i / (N_LEAVES - 1));
+    drawDetailedLeaf(currentAngle, i, 'L');
+}
+
+// 3. رسم الغصن الأيمن
+const R_START = 88 * Math.PI / 180;
+const R_END   = -70 * Math.PI / 180;
+
+for (let i = 0; i < N_LEAVES; i++) {
+    const currentAngle = R_START + (R_END - R_START) * (i / (N_LEAVES - 1));
+    drawDetailedLeaf(currentAngle, i, 'R');
+}
+
+                        // === النص العربي في المنتصف (3 أسطر، بدون مثلث) ===
+                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+                        ctx.fillStyle = '#8B0000';
+                        ctx.font = 'bold 24px Arial';
+                        ctx.fillText('جامعة عين شمس', CX, CY - 30);
+
+                        ctx.fillStyle = '#14591e';
+                        ctx.font = 'bold 22px Arial';
+                        ctx.fillText('كلية الزراعة', CX, CY + 5);
+
+                        ctx.fillStyle = '#1a1a1a';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.fillText('قسم الهندسة الزراعية', CX, CY + 38);
+
+                        // تحويل إلى ArrayBuffer
                         const pngBase64 = cvs.toDataURL('image/png');
                         const b64 = pngBase64.split(',')[1];
                         const bin = atob(b64);
@@ -2176,11 +2303,11 @@
                 ];
 
                 // الصف الرئيسي: العنوان (يُدمَج عبر كل الأعمدة)
-                const titleRow = ["تقرير نظام IOT (مشروع تخرج المستوى الرابع)"];
+                const titleRow = ["تقرير عمليات التشغيل"];
                 while (titleRow.length < totalCols) titleRow.push("");
 
                 // صف ترويسة الأعمدة
-                const headerRow = ["العملية", "التاريخ", "نوع البيانات", "بيانات الري"];
+                const headerRow = ["العملية", "التاريخ", "نوع البيانات", "البيانات"];
                 while (headerRow.length < totalCols) headerRow.push("");
 
                 const dataArr = [...hdrData, titleRow, headerRow];
@@ -2548,7 +2675,7 @@
                 if (pairImgs.length > 0) pdf.addPage();
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(15);
-                pdf.text("Irrigation Data Visualization (50 Sensors)", 148, 7, { align: "center" });
+                pdf.text("Irrigation Data", 148, 7, { align: "center" });
                 const chartProps = pdf.getImageProperties(chartImgData);
                 const imgW = 260, chartY = 12;
                 const imgH = Math.min((chartProps.height * imgW) / chartProps.width, 195 - chartY);
